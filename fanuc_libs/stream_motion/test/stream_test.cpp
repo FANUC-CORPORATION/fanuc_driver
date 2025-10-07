@@ -36,7 +36,7 @@ public:
   static stream_motion::RobotStatusPacket createStatusPacket(const int sequence_no)
   {
     stream_motion::RobotStatusPacket status;
-    status.status = 0;
+    status.status = 4;
     status.packet_type = 0;
     status.version_no = 3;
     status.position = kDefaultVector;
@@ -188,7 +188,7 @@ TEST(StreamMotionConnectionTest, TestSuccessfulConnectionCycle)
   stream_motion::RobotStatusPacket status{};
   ASSERT_TRUE(connection.getStatusPacket(status));
 
-  EXPECT_EQ(status.status, 0);
+  EXPECT_EQ((status.status & 0x4) >> 2, 1);
   EXPECT_EQ(status.packet_type, 0);
   EXPECT_EQ(status.version_no, 3);
   EXPECT_EQ(status.joint_angle, kDefaultVector);

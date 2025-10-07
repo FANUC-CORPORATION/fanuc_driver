@@ -7,7 +7,7 @@
   -->
 <package format="3">
   <name>fanuc_hardware_interface</name>
-  <version>1.0.2</version>
+  <version>1.0.3</version>
   <description>
     ROS 2 control streaming driver for FANUC robots.
   </description>

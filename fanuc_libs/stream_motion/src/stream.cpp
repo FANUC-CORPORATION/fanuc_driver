@@ -380,8 +380,7 @@ bool StreamMotionConnection::getStatusPacket(RobotStatusPacket& status)
   }
   sequence_no_ = status.sequence_no;
 
-  // Return false if the SYSRDY is OFF
-  return (status.status ^ 0x4) != 0;
+  return true;
 }
 
 void ValidateGPIOConfig(const std::array<GPIOControlConfig, 32>& gpio_config)

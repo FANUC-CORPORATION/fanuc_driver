@@ -67,6 +67,7 @@ private:
   void publishRobotStatusExt();
 
   std::shared_ptr<rclcpp::TimerBase> robot_status_ext_timer_;
+  rclcpp::CallbackGroup::SharedPtr reentrant_group_;
 
   template <typename T>
   using ServicePtr = std::shared_ptr<rclcpp::Service<T>>;

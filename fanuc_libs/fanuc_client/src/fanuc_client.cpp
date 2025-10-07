@@ -400,12 +400,12 @@ void FanucClient::startRealtimeStream(std::shared_ptr<GPIOBuffer> gpio_buffer)
 
 void FanucClient::stopRealtimeStream()
 {
-  rmi_connection_->abort(std::nullopt);
   is_streaming_ = false;
   if (rt_thread_.joinable())
   {
     rt_thread_.join();
   }
+  rmi_connection_->abort(std::nullopt);
   stream_motion_->sendStopPacket();
 }
 

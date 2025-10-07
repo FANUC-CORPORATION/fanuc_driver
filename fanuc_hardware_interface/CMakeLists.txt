@@ -19,8 +19,9 @@ find_package(pluginlib REQUIRED)
 find_package(fanuc_libs REQUIRED)
 
 add_library(fanuc_robot_driver SHARED src/hardware_interface.cpp)
-target_link_libraries(fanuc_robot_driver PUBLIC
-  ${hardware_interface_LIBRARIES}
+
+target_link_libraries(fanuc_robot_driver
+  hardware_interface::hardware_interface
   pluginlib::pluginlib
   fanuc_libs::rmi
   fanuc_libs::stream_motion
@@ -31,8 +32,6 @@ target_include_directories(fanuc_robot_driver PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_include_directories(fanuc_robot_driver PRIVATE ${hardware_interface_INCLUDE_DIRS})
-target_include_directories(fanuc_robot_driver PUBLIC include)
 
 pluginlib_export_plugin_description_file(hardware_interface hardware_interface_plugin.xml)
 

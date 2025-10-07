@@ -675,8 +675,10 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
   set_payload_id_service_ =
       get_node()->create_service<fanuc_msgs::srv::SetPayloadID>("~/set_payload_id", &SetPayloadID);
 
-  robot_status_ext_timer_ =
-      get_node()->create_wall_timer(std::chrono::milliseconds(33), [this]() { this->publishRobotStatusExt(); });
+  reentrant_group_ = get_node()->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+
+  robot_status_ext_timer_ = get_node()->create_wall_timer(
+      std::chrono::milliseconds(33), [this]() { this->publishRobotStatusExt(); }, reentrant_group_);
 
   return ControllerInterface::on_configure(previous_state);
 }

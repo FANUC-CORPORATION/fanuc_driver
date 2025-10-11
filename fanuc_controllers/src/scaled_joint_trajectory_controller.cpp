@@ -54,8 +54,8 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
     read_state_from_state_interfaces(state_current_);
     rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
     rt_has_pending_goal_ = false;
-    traj_msg_external_point_ptr_.reset();
-    traj_msg_external_point_ptr_.initRT(set_hold_position());
+    new_trajectory_msg_.reset();
+    new_trajectory_msg_.initRT(set_hold_position());
     // command_joint_names_
   }
   last_is_connected_ = true;
@@ -104,15 +104,15 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
   const auto active_goal = *rt_active_goal_.readFromRT();
 
   // Check if a new external message has been received from nonRT threads
-  auto current_external_msg = traj_external_point_ptr_->get_trajectory_msg();
-  auto new_external_msg = traj_msg_external_point_ptr_.readFromRT();
+  auto current_external_msg = current_trajectory_->get_trajectory_msg();
+  auto new_external_msg = new_trajectory_msg_.readFromRT();
   // Discard, if a goal is pending but still not active (somewhere stuck in goal_handle_timer_)
   if (current_external_msg != *new_external_msg && (rt_has_pending_goal_ && !active_goal) == false)
   {
     fill_partial_goal(*new_external_msg);
     sort_to_local_joint_order(*new_external_msg);
     // TODO(denis): Add here integration of position and velocity
-    traj_external_point_ptr_->update(*new_external_msg);
+    current_trajectory_->update(*new_external_msg);
   }
 
   // TODO(anyone): can I here also use const on joint_interface since the reference_wrapper is not
@@ -134,17 +134,17 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
   {
     bool first_sample = false;
     // if sampling the first time, set the point before you sample
-    if (!traj_external_point_ptr_->is_sampled_already())
+    if (!current_trajectory_->is_sampled_already())
     {
       first_sample = true;
       last_scaled_time_ = time;
       if (params_.open_loop_control)
       {
-        traj_external_point_ptr_->set_point_before_trajectory_msg(time, last_commanded_state_, joints_angle_wraparound_);
+        current_trajectory_->set_point_before_trajectory_msg(time, last_commanded_state_, joints_angle_wraparound_);
       }
       else
       {
-        traj_external_point_ptr_->set_point_before_trajectory_msg(time, state_current_, joints_angle_wraparound_);
+        current_trajectory_->set_point_before_trajectory_msg(time, state_current_, joints_angle_wraparound_);
       }
     }
     double scale_percentage = 0.01 * first_order_lag_filter(static_cast<double>(time_scale_value_.load()));
@@ -153,13 +153,13 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
 
     // find segment for current timestamp
     joint_trajectory_controller::TrajectoryPointConstIter start_segment_itr, end_segment_itr;
-    const bool valid_point = traj_external_point_ptr_->sample(sample_time, interpolation_method_, state_desired_,
+    const bool valid_point = current_trajectory_->sample(sample_time, interpolation_method_, state_desired_,
                                                               start_segment_itr, end_segment_itr);
     last_scaled_time_ = sample_time;
 
     if (valid_point)
     {
-      const rclcpp::Time traj_start = traj_external_point_ptr_->time_from_start();
+      const rclcpp::Time traj_start = current_trajectory_->time_from_start();
       // this is the time instance
       // - started with the first segment: when the first point will be reached (in the future)
       // - later: when the point of the current segment was reached
@@ -171,7 +171,7 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
       bool tolerance_violated_while_moving = false;
       bool outside_goal_tolerance = false;
       bool within_goal_time = true;
-      const bool before_last_point = end_segment_itr != traj_external_point_ptr_->end();
+      const bool before_last_point = end_segment_itr != current_trajectory_->end();
       auto active_tol = active_tolerances_.readFromRT();
 
       // have we reached the end, are not holding position, and is a timeout configured?
@@ -180,8 +180,8 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
       {
         RCLCPP_WARN(logger, "Aborted due to command timeout");
 
-        traj_msg_external_point_ptr_.reset();
-        traj_msg_external_point_ptr_.initRT(set_hold_position());
+        new_trajectory_msg_.reset();
+        new_trajectory_msg_.initRT(set_hold_position());
       }
 
       // Check state/goal tolerance
@@ -286,8 +286,8 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
           rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
           rt_has_pending_goal_ = false;
           RCLCPP_WARN(logger, "Aborted due to state tolerance violation");
-          traj_msg_external_point_ptr_.reset();
-          traj_msg_external_point_ptr_.initRT(set_hold_position());
+          new_trajectory_msg_.reset();
+          new_trajectory_msg_.initRT(set_hold_position());
         }
         // check goal tolerance
         else if (!before_last_point)
@@ -303,8 +303,8 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
             rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
             rt_has_pending_goal_ = false;
             RCLCPP_INFO(logger, "Goal reached, success!");
-            traj_msg_external_point_ptr_.reset();
-            traj_msg_external_point_ptr_.initRT(set_success_trajectory_point());
+            new_trajectory_msg_.reset();
+            new_trajectory_msg_.initRT(set_success_trajectory_point());
           }
           else if (!within_goal_time)
           {
@@ -319,8 +319,8 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
             rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
             rt_has_pending_goal_ = false;
             RCLCPP_WARN(logger, "%s", error_string.c_str());
-            traj_msg_external_point_ptr_.reset();
-            traj_msg_external_point_ptr_.initRT(set_hold_position());
+            new_trajectory_msg_.reset();
+            new_trajectory_msg_.initRT(set_hold_position());
           }
         }
       }
@@ -328,14 +328,14 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
       {
         // we need to ensure that there is no pending goal -> we get a race condition otherwise
         RCLCPP_ERROR(logger, "Holding position due to state tolerance violation");
-        traj_msg_external_point_ptr_.reset();
-        traj_msg_external_point_ptr_.initRT(set_hold_position());
+        new_trajectory_msg_.reset();
+        new_trajectory_msg_.initRT(set_hold_position());
       }
       else if (!before_last_point && !within_goal_time && !rt_has_pending_goal_)
       {
         RCLCPP_ERROR(logger, "Exceeded goal_time_tolerance: holding position...");
-        traj_msg_external_point_ptr_.reset();
-        traj_msg_external_point_ptr_.initRT(set_hold_position());
+        new_trajectory_msg_.reset();
+        new_trajectory_msg_.initRT(set_hold_position());
       }
       // else, run another cycle while waiting for outside_goal_tolerance
       // to be satisfied (will stay in this state until new message arrives)

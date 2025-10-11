@@ -42,7 +42,7 @@ controller_interface::CallbackReturn ScaledJointTrajectoryController::on_activat
 controller_interface::return_type ScaledJointTrajectoryController::update(const rclcpp::Time& time,
                                                                           const rclcpp::Duration& period)
 {
-  if (!state_interfaces_.empty() && state_interfaces_.back().get_value() == 0.0)
+  if (!state_interfaces_.empty() && state_interfaces_.back().get_optional() == 0.0)
   {
     last_is_connected_ = false;
     // The robot state indicated that the robot is no longer connected.
@@ -61,7 +61,7 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
   last_is_connected_ = true;
 
   folag_h_ = period.seconds();
-  if (get_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE)
+  if (get_lifecycle_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE)
   {
     return controller_interface::return_type::OK;
   }

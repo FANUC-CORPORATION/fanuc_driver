@@ -7,6 +7,7 @@
 
 #include "fanuc_client/fanuc_client.hpp"
 #include "fanuc_controllers/fanuc_gpio_controller.hpp"
+#include "rclcpp_lifecycle/state.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 
 using namespace std::chrono_literals;
@@ -75,7 +76,8 @@ TEST(GPIOControllerTest, DISABLED_ROS2ControlLifecycle)
   // set parameters for controller
   fanuc_controllers::FanucGPIOController gpio_controller;
 
-  ASSERT_EQ(gpio_controller.init("gpio_controller", ""), controller_interface::return_type::OK)
+  ASSERT_EQ(gpio_controller.init("gpio_controller", "", 100, "test_controller_manager", rclcpp::NodeOptions()), 
+            controller_interface::return_type::OK)
       << "failed to initialize the controller";
   gpio_controller.get_node()->declare_parameter("gpio_config_file", std::string(GPIO_CONFIG_FILE));
   exec->add_node(gpio_controller.get_node()->get_node_base_interface());
@@ -95,11 +97,11 @@ TEST(GPIOControllerTest, DISABLED_ROS2ControlLifecycle)
   fanuc_client::RMISingleton::getRMIInstance()->initializeRemoteMotion(std::nullopt);
 
   // configure the controller
-  EXPECT_EQ(gpio_controller.on_configure(gpio_controller.get_state()), controller_interface::CallbackReturn::SUCCESS)
+  EXPECT_EQ(gpio_controller.on_configure(gpio_controller.get_lifecycle_state()), controller_interface::CallbackReturn::SUCCESS)
       << "failed to configure controller";
 
   // activate the controller
-  EXPECT_EQ(gpio_controller.on_activate(gpio_controller.get_state()), controller_interface::CallbackReturn::SUCCESS)
+  EXPECT_EQ(gpio_controller.on_activate(gpio_controller.get_lifecycle_state()), controller_interface::CallbackReturn::SUCCESS)
       << "failed to activate controller";
 
   // update the controller

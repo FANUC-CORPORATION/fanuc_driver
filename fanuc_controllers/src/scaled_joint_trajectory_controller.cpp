@@ -228,8 +228,8 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
           for (auto i = 0ul; i < dof_; ++i)
           {
             tmp_command_[i] = (state_desired_.velocities[i] * ff_velocity_scale_[i]) +
-                              pids_[i]->computeCommand(state_error_.positions[i], state_error_.velocities[i],
-                                                       static_cast<uint64_t>(period.nanoseconds()));
+                              pids_[i]->compute_command(state_error_.positions[i], state_error_.velocities[i],
+                                                       static_cast<rcl_duration_value_t>(period.nanoseconds()));
           }
         }
 
@@ -343,7 +343,7 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
     }
   }
 
-  publish_state(state_desired_, state_current_, state_error_);
+  publish_state(time, state_desired_, state_current_, state_error_);
   return controller_interface::return_type::OK;
 }
 

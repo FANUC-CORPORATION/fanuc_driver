@@ -779,17 +779,17 @@ controller_interface::return_type FanucGPIOController::update(const rclcpp::Time
 
   for (size_t i = 0; i < index_analog_io_cmd_.size(); ++i)
   {
-    command_interfaces_[index_analog_io_cmd_[i]].set_value(analog_io_cmd_msg_.values[i].value);
+    command_interfaces_[index_analog_io_cmd_[i]].set_value(static_cast<double>(analog_io_cmd_msg_.values[i].value));
   }
 
   for (size_t i = 0; i < index_io_cmd_.size(); ++i)
   {
-    command_interfaces_[index_io_cmd_[i]].set_value(io_cmd_msg_.values[i].value);
+    command_interfaces_[index_io_cmd_[i]].set_value(static_cast<double>(io_cmd_msg_.values[i].value));
   }
 
   for (size_t i = 0; i < index_num_reg_cmd_.size(); ++i)
   {
-    command_interfaces_[index_num_reg_cmd_[i]].set_value(num_reg_cmd_msg_.values[i].value);
+    command_interfaces_[index_num_reg_cmd_[i]].set_value(static_cast<double>(num_reg_cmd_msg_.values[i].value));
   }
 
   return controller_interface::return_type::OK;

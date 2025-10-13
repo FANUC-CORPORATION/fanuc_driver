@@ -373,6 +373,8 @@ std::string IOTypeToString(const fanuc_msgs::msg::IOType& type, const uint32_t i
 
 controller_interface::CallbackReturn FanucGPIOController::on_init()
 {
+  get_node()->declare_parameter<std::string>("gpio_config_file_package", "");
+  get_node()->declare_parameter<std::string>("gpio_config_file_path", "");
   return controller_interface::CallbackReturn::SUCCESS;
 }
 

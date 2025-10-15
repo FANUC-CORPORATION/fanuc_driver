@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 -->
 <package format="3">
   <name>fanuc_moveit_config</name>
-  <version>1.0.3</version>
+  <version>1.0.4</version>
   <description>
      An example package with MoveIt2 configurations for FANUC robots.
   </description>

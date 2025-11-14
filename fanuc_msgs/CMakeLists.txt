@@ -43,8 +43,13 @@ set(srv_files
   srv/SetNumReg.srv
   srv/GetNumReg.srv
 
+  srv/SetPosReg.srv
+  srv/GetPosReg.srv
+
   srv/SetGenOverride.srv
   srv/SetPayloadID.srv
+  srv/SetPayloadValue.srv
+  srv/SetPayloadComp.srv
 )
 
 

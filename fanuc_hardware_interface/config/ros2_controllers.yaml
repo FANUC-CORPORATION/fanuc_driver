@@ -1,12 +1,14 @@
 controller_manager:
   ros__parameters:
-    update_rate: 500  # Hz
+    update_rate: 500 # Hz
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
     joint_trajectory_controller:
       type: fanuc_controllers/ScaledJointTrajectoryController
     fanuc_gpio_controller:
       type: fanuc_controllers/FanucGPIOController
+    forward_position_controller:
+      type: forward_command_controller/ForwardCommandController
 
 fanuc_gpio_controller:
   ros__parameters:
@@ -29,7 +31,7 @@ joint_trajectory_controller:
     state_publish_rate: 100.0
     action_monitor_rate: 20.0
     allow_partial_joints_goal: false
-    allow_nonzero_velocity_at_trajectory_end: false  # Set to false to suppress deprecation warning
+    allow_nonzero_velocity_at_trajectory_end: false # Set to false to suppress deprecation warning
     constraints:
       stopped_velocity_tolerance: 0.0
       goal_time: 0.0
@@ -51,3 +53,14 @@ joint_trajectory_controller:
       J6:
         goal: 0.05
         trajectory: 0.25
+
+forward_position_controller:
+  ros__parameters:
+    joints:
+      - J1
+      - J2
+      - J3
+      - J4
+      - J5
+      - J6
+    interface_name: "position"

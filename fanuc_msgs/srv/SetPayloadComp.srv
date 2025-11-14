@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2025, FANUC America Corporation
+# SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Mass unit: kg
+# Center of Gravity (CG) unit: m
+# Inertia (IN) unit: kgm^2
+
+uint16 payload_schedule_id
+float32 mass
+float32 cg_x
+float32 cg_y
+float32 cg_z
+float32 in_x
+float32 in_y
+float32 in_z
+---
+int32 result

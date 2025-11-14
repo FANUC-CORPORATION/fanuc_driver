@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 -->
 <package format="3">
   <name>fanuc_controllers</name>
-  <version>1.0.3</version>
+  <version>1.1.0</version>
   <description>ROS2 controllers for FANUC robots</description>
   <maintainer email="fanuc-ros-maintainer@fanuc.co.jp">FANUC CORPORATION</maintainer>
   <license>Apache-2.0</license>

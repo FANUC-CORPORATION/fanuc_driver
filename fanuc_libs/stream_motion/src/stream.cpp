@@ -376,7 +376,8 @@ bool StreamMotionConnection::getStatusPacket(RobotStatusPacket& status)
   swapRobotStatusPacketBytes(status);
   if (sequence_no_ + 1 != status.sequence_no)
   {
-    return false;
+    // Temp ignore sequence number mismatch
+    // return false;
   }
   sequence_no_ = status.sequence_no;
 

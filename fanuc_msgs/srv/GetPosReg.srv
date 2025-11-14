@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2025, FANUC America Corporation
+# SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+#
+# SPDX-License-Identifier: Apache-2.0
+
+uint16 index
+---
+int32 result
+string representation
+uint8 utool
+uint8 uframe
+uint8 front
+uint8 up
+uint8 left
+uint8 flip
+int8 turn4
+int8 turn5
+int8 turn6
+float32 x
+float32 y
+float32 z
+float32 w
+float32 p
+float32 r
+float32 ext1
+float32 ext2
+float32 ext3
+float32 j1
+float32 j2
+float32 j3
+float32 j4
+float32 j5
+float32 j6
+float32 j7
+float32 j8
+float32 j9

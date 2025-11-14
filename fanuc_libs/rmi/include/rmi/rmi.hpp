@@ -43,10 +43,10 @@ public:
 
   virtual ReadErrorPacket::Response readError(std::optional<double> timeout) = 0;
 
-  virtual WritePositionRegisterPacket::Response writePositionRegister(int register_number,
-                                                                      const ConfigurationData& configuration,
-                                                                      const PositionData& position,
-                                                                      std::optional<double> timeout) = 0;
+  virtual WritePositionRegisterPacket::Response
+  writePositionRegister(int register_number, const std::string& representation, const ConfigurationData& configuration,
+                        const PositionData& position, const JointAngleData& joint_angle,
+                        std::optional<double> timeout) = 0;
   virtual ReadPositionRegisterPacket::Response readPositionRegister(int register_number,
                                                                     std::optional<double> timeout) = 0;
 
@@ -79,6 +79,14 @@ public:
   virtual GetExtendedStatusPacket::Response getExtendedStatus(std::optional<double> timeout) = 0;
 
   virtual SetPayloadPacket::Response setPayloadSchedule(uint8_t payload_schedule_number,
+                                                        std::optional<double> timeout) = 0;
+
+  virtual SetPayloadValuePacket::Response setPayloadValue(uint8_t payload_schedule_number, float mass, float cg_x,
+                                                          float cg_y, float cg_z, bool use_in, float in_x, float in_y,
+                                                          float in_z, std::optional<double> timeout) = 0;
+
+  virtual SetPayloadCompPacket::Response setPayloadComp(uint8_t payload_schedule_number, float mass, float cg_x,
+                                                        float cg_y, float cg_z, float in_x, float in_y, float in_z,
                                                         std::optional<double> timeout) = 0;
 
   virtual ReadJointAnglesPacket::Response readJointAngles(const std::optional<uint8_t>& group,
@@ -131,10 +139,12 @@ public:
 
   ReadErrorPacket::Response readError(std::optional<double> timeout) override;
 
-  WritePositionRegisterPacket::Response writePositionRegister(int register_number,
+  WritePositionRegisterPacket::Response writePositionRegister(int register_number, const std::string& representation,
                                                               const ConfigurationData& configuration,
                                                               const PositionData& position,
+                                                              const JointAngleData& joint_angle,
                                                               std::optional<double> timeout) override;
+
   ReadPositionRegisterPacket::Response readPositionRegister(int register_number, std::optional<double> timeout) override;
 
   ReadNumericRegisterPacket::Response readNumericRegister(int register_number, std::optional<double> timeout) override;
@@ -163,6 +173,14 @@ public:
   GetExtendedStatusPacket::Response getExtendedStatus(std::optional<double> timeout) override;
 
   SetPayloadPacket::Response setPayloadSchedule(uint8_t payload_schedule_number, std::optional<double> timeout) override;
+
+  SetPayloadValuePacket::Response setPayloadValue(uint8_t payload_schedule_number, float mass, float cg_x, float cg_y,
+                                                  float cg_z, bool use_in, float in_x, float in_y, float in_z,
+                                                  std::optional<double> timeout) override;
+
+  SetPayloadCompPacket::Response setPayloadComp(uint8_t payload_schedule_number, float mass, float cg_x, float cg_y,
+                                                float cg_z, float in_x, float in_y, float in_z,
+                                                std::optional<double> timeout) override;
 
   ReadJointAnglesPacket::Response readJointAngles(const std::optional<uint8_t>& group,
                                                   std::optional<double> timeout) override;

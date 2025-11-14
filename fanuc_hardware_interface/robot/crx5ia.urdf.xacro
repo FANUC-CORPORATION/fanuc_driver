@@ -6,6 +6,7 @@
   <xacro:arg name="stream_motion_port" default="60015"/>
   <xacro:arg name="gpio_configuration" default=""/>
   <xacro:arg name="payload_schedule" default="1"/>
+  <xacro:arg name="out_cmd_interp_buff_target" default="8"/>
   <xacro:arg name="use_mock" default="false"/>
 
   <xacro:include filename="$(find fanuc_crx_description)/urdf/crx5ia_urdf_macro.xacro"/>

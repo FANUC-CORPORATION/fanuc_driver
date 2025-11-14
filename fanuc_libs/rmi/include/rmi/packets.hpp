@@ -437,7 +437,7 @@ struct ReadPositionRegisterPacket
   struct Request
   {
     std::string Command = "FRC_ReadPositionRegister";
-    int RegisterNumber;
+    uint16_t RegisterNumber;
     std::optional<uint8_t> Group;
   };
 
@@ -446,8 +446,10 @@ struct ReadPositionRegisterPacket
     std::string Command = "FRC_ReadPositionRegister";
     int ErrorID;
     uint16_t RegisterNumber;
-    ConfigurationData Configuration;
-    PositionData Position;
+    std::string Representation;
+    std::optional<ConfigurationData> Configuration;
+    std::optional<PositionData> Position;
+    std::optional<JointAngleData> JointAngle;
     std::optional<uint8_t> Group;
   };
 };
@@ -458,9 +460,11 @@ struct WritePositionRegisterPacket
   struct Request
   {
     std::string Command = "FRC_WritePositionRegister";
-    int RegisterNumber;
-    ConfigurationData Configuration;
-    PositionData Position;
+    uint16_t RegisterNumber;
+    std::optional<std::string> Representation;
+    std::optional<ConfigurationData> Configuration;
+    std::optional<PositionData> Position;
+    std::optional<JointAngleData> JointAngle;
     std::optional<uint8_t> Group;
   };
 
@@ -468,6 +472,7 @@ struct WritePositionRegisterPacket
   {
     std::string Command = "FRC_WritePositionRegister";
     int ErrorID;
+    uint16_t RegisterNumber;
     std::optional<uint8_t> Group;
   };
 };
@@ -1155,7 +1160,7 @@ struct GetExtendedStatusPacket
     std::optional<std::string> ControlMode;
     int DrivesPowered;
     int GenOverride;
-    float SpeedClampLimit;
+    std::optional<float> SpeedClampLimit;
   };
 };
 
@@ -1172,6 +1177,50 @@ struct ConnectROS2Packet
     uint16_t PortNumber;
     uint16_t MajorVersion;
     uint16_t MinorVersion;
+  };
+};
+
+struct SetPayloadValuePacket
+{
+  struct Request
+  {
+    std::string Command = "FRC_SetPayloadValue";
+    uint8_t ScheduleNumber;
+    std::optional<uint8_t> Group;
+    float Mass;
+    float CG_X;
+    float CG_Y;
+    float CG_Z;
+    std::optional<float> IN_X;
+    std::optional<float> IN_Y;
+    std::optional<float> IN_Z;
+  };
+  struct Response
+  {
+    std::string Command = "FRC_SetPayloadValue";
+    int ErrorID;
+  };
+};
+
+struct SetPayloadCompPacket
+{
+  struct Request
+  {
+    std::string Command = "FRC_SetPayloadComp";
+    uint8_t ScheduleNumber;
+    std::optional<uint8_t> Group;
+    float Mass;
+    float CG_X;
+    float CG_Y;
+    float CG_Z;
+    float IN_X;
+    float IN_Y;
+    float IN_Z;
+  };
+  struct Response
+  {
+    std::string Command = "FRC_SetPayloadComp";
+    int ErrorID;
   };
 };
 

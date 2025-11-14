@@ -8,3 +8,4 @@ bool in_motion
 bool drives_powered
 int32 gen_override
 float32 speed_clamp_limit
+string control_mode

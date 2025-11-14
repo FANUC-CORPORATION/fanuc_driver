@@ -107,8 +107,8 @@ public:
   MOCK_METHOD(rmi::ResetRobotPacket::Response, reset, (std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::ReadErrorPacket::Response, readError, (std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::WritePositionRegisterPacket::Response, writePositionRegister,
-              (int register_number, const rmi::ConfigurationData& configuration, const rmi::PositionData& position,
-               std::optional<double> timeout),
+              (int register_number, const std::string& representation, const rmi::ConfigurationData& configuration,
+               const rmi::PositionData& position, const rmi::JointAngleData& joint_angle, std::optional<double> timeout),
               (override));
   MOCK_METHOD(rmi::ReadPositionRegisterPacket::Response, readPositionRegister,
               (int register_number, std::optional<double> timeout), (override));
@@ -140,6 +140,14 @@ public:
   MOCK_METHOD(rmi::GetExtendedStatusPacket::Response, getExtendedStatus, (std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::SetPayloadPacket::Response, setPayloadSchedule,
               (uint8_t payload_schedule_number, std::optional<double> timeout), (override));
+  MOCK_METHOD(rmi::SetPayloadValuePacket::Response, setPayloadValue,
+              (uint8_t payload_schedule_number, float mass, float cg_x, float cg_y, float cg_z, bool use_in, float in_x,
+               float in_y, float in_z, std::optional<double> timeout),
+              (override));
+  MOCK_METHOD(rmi::SetPayloadCompPacket::Response, setPayloadComp,
+              (uint8_t payload_schedule_number, float mass, float cg_x, float cg_y, float cg_z, float in_x, float in_y,
+               float in_z, std::optional<double> timeout),
+              (override));
   MOCK_METHOD(rmi::JointMotionJRepPacket::Response, sendJointMotion,
               (rmi::JointMotionJRepPacket::Request joint_motion_request, const std::optional<double> timeout),
               (override));

@@ -113,6 +113,60 @@ void GetNumReg(const std::shared_ptr<fanuc_msgs::srv::GetNumReg::Request>& reque
   }
 }
 
+void GetPosReg(const std::shared_ptr<fanuc_msgs::srv::GetPosReg::Request>& request,
+               const std::shared_ptr<fanuc_msgs::srv::GetPosReg::Response>& response)
+{
+  try
+  {
+    response->result = 1;
+    rmi::ReadPositionRegisterPacket::Response rmi_response =
+        getRMIInstance()->readPositionRegister(request->index, 1.0);
+    response->representation = rmi_response.Representation;
+    if (rmi_response.Configuration.has_value())
+    {
+      response->utool = rmi_response.Configuration->UToolNumber;
+      response->uframe = rmi_response.Configuration->UFrameNumber;
+      response->front = rmi_response.Configuration->Front;
+      response->up = rmi_response.Configuration->Up;
+      response->left = rmi_response.Configuration->Left;
+      response->flip = rmi_response.Configuration->Flip;
+      response->turn4 = rmi_response.Configuration->Turn4;
+      response->turn5 = rmi_response.Configuration->Turn5;
+      response->turn6 = rmi_response.Configuration->Turn6;
+    }
+    if (rmi_response.Position.has_value())
+    {
+      response->x = rmi_response.Position->X;
+      response->y = rmi_response.Position->Y;
+      response->z = rmi_response.Position->Z;
+      response->w = rmi_response.Position->W;
+      response->p = rmi_response.Position->P;
+      response->r = rmi_response.Position->R;
+      response->ext1 = rmi_response.Position->Ext1;
+      response->ext2 = rmi_response.Position->Ext2;
+      response->ext3 = rmi_response.Position->Ext3;
+    }
+    if (rmi_response.JointAngle.has_value())
+    {
+      response->j1 = rmi_response.JointAngle->J1;
+      response->j2 = rmi_response.JointAngle->J2;
+      response->j3 = rmi_response.JointAngle->J3;
+      response->j4 = rmi_response.JointAngle->J4;
+      response->j5 = rmi_response.JointAngle->J5;
+      response->j6 = rmi_response.JointAngle->J6;
+      response->j7 = rmi_response.JointAngle->J7;
+      response->j8 = rmi_response.JointAngle->J8;
+      response->j9 = rmi_response.JointAngle->J9;
+    }
+    response->result = rmi_response.ErrorID;
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
 void GetGroupIO(const std::shared_ptr<fanuc_msgs::srv::GetGroupIO::Request>& request,
                 const std::shared_ptr<fanuc_msgs::srv::GetGroupIO::Response>& response)
 {
@@ -250,6 +304,52 @@ void SetNumReg(const std::shared_ptr<fanuc_msgs::srv::SetNumReg::Request>& reque
   }
 }
 
+void SetPosReg(const std::shared_ptr<fanuc_msgs::srv::SetPosReg::Request>& request,
+               const std::shared_ptr<fanuc_msgs::srv::SetPosReg::Response>& response)
+{
+  rmi::ConfigurationData configuration;
+  rmi::PositionData position;
+  rmi::JointAngleData joint_angle;
+  configuration.UToolNumber = request->utool;
+  configuration.UFrameNumber = request->uframe;
+  configuration.Front = std::min(int(request->front), 1);
+  configuration.Up = std::min(int(request->up), 1);
+  configuration.Left = std::min(int(request->left), 1);
+  configuration.Flip = std::min(int(request->flip), 1);
+  configuration.Turn4 = request->turn4;
+  configuration.Turn5 = request->turn5;
+  configuration.Turn6 = request->turn6;
+  position.X = request->x;
+  position.Y = request->y;
+  position.Z = request->z;
+  position.W = request->w;
+  position.P = request->p;
+  position.R = request->r;
+  position.Ext1 = request->ext1;
+  position.Ext2 = request->ext2;
+  position.Ext3 = request->ext3;
+  joint_angle.J1 = request->j1;
+  joint_angle.J2 = request->j2;
+  joint_angle.J3 = request->j3;
+  joint_angle.J4 = request->j4;
+  joint_angle.J5 = request->j5;
+  joint_angle.J6 = request->j6;
+  joint_angle.J7 = request->j7;
+  joint_angle.J8 = request->j8;
+  joint_angle.J9 = request->j9;
+  try
+  {
+    const rmi::WritePositionRegisterPacket::Response rmi_response = getRMIInstance()->writePositionRegister(
+        request->index, request->representation, configuration, position, joint_angle, 1.0);
+    response->result = rmi_response.ErrorID;
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
 void SetPayloadID(const std::shared_ptr<fanuc_msgs::srv::SetPayloadID::Request>& request,
                   const std::shared_ptr<fanuc_msgs::srv::SetPayloadID::Response>& response)
 {
@@ -257,6 +357,41 @@ void SetPayloadID(const std::shared_ptr<fanuc_msgs::srv::SetPayloadID::Request>&
   {
     const rmi::SetPayloadPacket::Response rmi_response =
         getRMIInstance()->setPayloadSchedule(request->payload_schedule_id, 1.0);
+    response->result = rmi_response.ErrorID;
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void SetPayloadValue(const std::shared_ptr<fanuc_msgs::srv::SetPayloadValue::Request>& request,
+                     const std::shared_ptr<fanuc_msgs::srv::SetPayloadValue::Response>& response)
+{
+  try
+  {
+    const rmi::SetPayloadValuePacket::Response rmi_response =
+        getRMIInstance()->setPayloadValue(request->payload_schedule_id, request->mass, request->cg_x, request->cg_y,
+                                          request->cg_z, request->use_in, request->in_x, request->in_y, request->in_z,
+                                          1.0);
+    response->result = rmi_response.ErrorID;
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void SetPayloadComp(const std::shared_ptr<fanuc_msgs::srv::SetPayloadComp::Request>& request,
+                    const std::shared_ptr<fanuc_msgs::srv::SetPayloadComp::Response>& response)
+{
+  try
+  {
+    const rmi::SetPayloadCompPacket::Response rmi_response =
+        getRMIInstance()->setPayloadComp(request->payload_schedule_id, request->mass, request->cg_x, request->cg_y,
+                                         request->cg_z, request->in_x, request->in_y, request->in_z, 1.0);
     response->result = rmi_response.ErrorID;
   }
   catch (std::runtime_error& e)
@@ -395,6 +530,10 @@ void FanucGPIOController::publishRobotStatusExt()
     robot_status_ext_msg_.error_code = robot_status_ext.ErrorCode.has_value() ? robot_status_ext.ErrorCode.value() : "";
     robot_status_ext_msg_.gen_override = robot_status_ext.GenOverride;
     robot_status_ext_msg_.in_motion = robot_status_ext.InMotion;
+    robot_status_ext_msg_.speed_clamp_limit =
+        robot_status_ext.SpeedClampLimit.has_value() ? robot_status_ext.SpeedClampLimit.value() : 0.0;
+    robot_status_ext_msg_.control_mode =
+        robot_status_ext.ControlMode.has_value() ? robot_status_ext.ControlMode.value() : "";
     robot_status_ext_publisher_->publish(robot_status_ext_msg_);
   }
   catch (const std::exception& e)
@@ -665,6 +804,7 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
   get_analog_io_service_ = get_node()->create_service<fanuc_msgs::srv::GetAnalogIO>("~/get_analog_io", &GetAnalogIO);
   get_bool_io_service_ = get_node()->create_service<fanuc_msgs::srv::GetBoolIO>("~/get_bool_io", &GetBoolIO);
   get_num_reg_service_ = get_node()->create_service<fanuc_msgs::srv::GetNumReg>("~/get_num_reg", &GetNumReg);
+  get_pos_reg_service_ = get_node()->create_service<fanuc_msgs::srv::GetPosReg>("~/get_pos_reg", &GetPosReg);
   set_analog_io_service_ = get_node()->create_service<fanuc_msgs::srv::SetAnalogIO>("~/set_analog_io", &SetAnalogIO);
   set_bool_io_service_ = get_node()->create_service<fanuc_msgs::srv::SetBoolIO>("~/set_bool_io", &SetBoolIO);
   set_gen_override_service_ =
@@ -672,8 +812,13 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
   set_group_io_service_ = get_node()->create_service<fanuc_msgs::srv::SetGroupIO>("~/set_group_io", &SetGroupIO);
   get_group_io_service_ = get_node()->create_service<fanuc_msgs::srv::GetGroupIO>("~/get_group_io", &GetGroupIO);
   set_num_reg_service_ = get_node()->create_service<fanuc_msgs::srv::SetNumReg>("~/set_num_reg", &SetNumReg);
+  set_pos_reg_service_ = get_node()->create_service<fanuc_msgs::srv::SetPosReg>("~/set_pos_reg", &SetPosReg);
   set_payload_id_service_ =
       get_node()->create_service<fanuc_msgs::srv::SetPayloadID>("~/set_payload_id", &SetPayloadID);
+  set_payload_value_service_ =
+      get_node()->create_service<fanuc_msgs::srv::SetPayloadValue>("~/set_payload_value", &SetPayloadValue);
+  set_payload_comp_service_ =
+      get_node()->create_service<fanuc_msgs::srv::SetPayloadComp>("~/set_payload_comp", &SetPayloadComp);
 
   reentrant_group_ = get_node()->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 
@@ -825,12 +970,16 @@ FanucGPIOController::on_deactivate(const rclcpp_lifecycle::State& previous_state
   get_bool_io_service_.reset();
   get_group_io_service_.reset();
   get_num_reg_service_.reset();
+  get_pos_reg_service_.reset();
   set_analog_io_service_.reset();
   set_bool_io_service_.reset();
   set_gen_override_service_.reset();
   set_group_io_service_.reset();
   set_num_reg_service_.reset();
+  set_pos_reg_service_.reset();
   set_payload_id_service_.reset();
+  set_payload_value_service_.reset();
+  set_payload_comp_service_.reset();
 
   return ControllerInterface::on_deactivate(previous_state);
 }

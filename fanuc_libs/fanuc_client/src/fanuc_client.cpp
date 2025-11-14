@@ -5,11 +5,10 @@
 
 #include "fanuc_client/fanuc_client.hpp"
 
+#include <Eigen/Core>
 #include <cstdint>
 #include <iostream>
 #include <utility>
-
-#include <Eigen/Core>
 
 #include "fanuc_client/gpio_buffer.hpp"
 #include "readerwriterqueue.h"
@@ -22,6 +21,8 @@ namespace
 constexpr double kFullPayload = 7.0;
 constexpr auto kStatusPacketFailureMessage = "Invalid robot status packet. Make sure the robot connected can be "
                                              "reached on the network and is in a running state.";
+constexpr auto kStatusStatusNotReadyMessage = "Stream motion control is not ready. Check if the robot has alarms "
+                                              "or something is disturbing Remote Motion's TP program execution.";
 
 void AssertIsStreaming(const std::atomic<bool>& is_streaming)
 {
@@ -84,6 +85,7 @@ FanucClient::FanucClient(std::string robot_ip, const uint16_t stream_motion_port
   , rmi_connection_{ rmi_connection_interface == nullptr ?
                          RMISingleton::creatNewRMIInstance(robot_ip_, rmi_port_) :
                          RMISingleton::setRMIInstance(std::move(rmi_connection_interface)) }
+  , out_cmd_interp_buff_target_{ 8 }
   , p_queue_impl_(std::make_unique<PQueueImpl>())
 {
   rmi_connection_->connect(5);
@@ -217,21 +219,40 @@ void FanucClient::streamMotionThread(const Eigen::VectorXd& joint_angles)
   Eigen::VectorXd command = joint_angles;
   Eigen::VectorXd last_command = joint_angles;
   std::array<uint8_t, 256> command_io{};
-  int64_t counter = 0;
+  double ts_drift = 0.0;
+  double dev_time = 0.0;
+  double dev_time_prev = 0.0;
 
   while (is_streaming_)
   {
-    counter++;
     if (!stream_motion_->getStatusPacket(status))
     {
       // Abort stream if we cannot get the status packet
-      // std::cerr << kStatusPacketFailureMessage << std::endl;
       is_streaming_ = false;
     }
 
-    // Handle joint commands
-    const double current_timestamp = static_cast<double>(counter) * getControlPeriod() / 1000.0;
-    const double last_timestamp = current_timestamp - getControlPeriod() / 1000.0;
+    // set estimated time to first command's timestamp
+    if ((dev_time == 0.0) && (p_queue_impl_->command_queue_.size_approx() != 0))
+    {
+      const PQueueImpl::StampedEigen* queue_entry = p_queue_impl_->command_queue_.peek();
+      dev_time = std::get<0>(*queue_entry).count();
+      dev_time_prev = dev_time;
+    }
+    else
+    {
+      // calculate drift
+      double time_error = static_cast<double>(p_queue_impl_->command_queue_.size_approx()) -
+                          static_cast<double>(out_cmd_interp_buff_target_);
+      ts_drift = 0.99 * ts_drift + time_error * 0.000001;
+
+      // push the time forward
+      dev_time_prev = dev_time;
+      dev_time += (getControlPeriod() / 1000.0) + ts_drift;
+    }
+
+    int size_before = p_queue_impl_->command_queue_.size_approx();
+
+    // find the right interval to use.
     while (p_queue_impl_->command_queue_.size_approx() != 0)
     {
       const PQueueImpl::StampedEigen* queue_entry = p_queue_impl_->command_queue_.peek();
@@ -239,20 +260,30 @@ void FanucClient::streamMotionThread(const Eigen::VectorXd& joint_angles)
       last_command_timestamp = command_timestamp;
       command_timestamp = std::get<0>(*queue_entry).count();
       command = std::get<1>(*queue_entry);
-      if (command_timestamp >= last_timestamp)
+      if (dev_time == 0.0)
+      {
+        dev_time = command_timestamp;
+        dev_time_prev = command_timestamp;
+      }
+      if (command_timestamp >= dev_time_prev)
       {
         break;
       }
       p_queue_impl_->command_queue_.pop();
     }
 
-    if (last_command_timestamp == command_timestamp)
-    {
-      last_command_timestamp += static_cast<double>(getControlPeriod()) / 1000.0;
-    }
     // Do interpolation.
-    double alpha = (last_timestamp - last_command_timestamp) / (command_timestamp - last_command_timestamp);
+    double alpha;
+    if (command_timestamp - last_command_timestamp < 1e-6)
+    {
+      alpha = 0;
+    }
+    else
+    {
+      alpha = (dev_time_prev - last_command_timestamp) / (command_timestamp - last_command_timestamp);
+    }
     alpha = std::min(alpha, 1.0);
+    alpha = std::max(alpha, 0.0);
     for (Eigen::Index i = 0; i < status.joint_angle.size(); ++i)
     {
       command_pos[i] = alpha * command[i] + (1.0 - alpha) * last_command[i];
@@ -373,11 +404,28 @@ void FanucClient::startRealtimeStream(std::shared_ptr<GPIOBuffer> gpio_buffer)
   stream_motion::RobotStatusPacket status;
   stream_motion_->sendStartPacket();
   const auto pre_loop_time = std::chrono::steady_clock::now();
-  while (!stream_motion_->getStatusPacket(status))
+  bool got_status = false;
+  while (true)
   {
-    if (std::chrono::steady_clock::now() - pre_loop_time > std::chrono::seconds(1))
+    if (stream_motion_->getStatusPacket(status))
     {
-      throw std::runtime_error(kStatusPacketFailureMessage);
+      got_status = true;
+      if (status.status & 0x1)
+      {
+        /* STREAM_MOTN.TP is ready */
+        break;
+      }
+    }
+    if (std::chrono::steady_clock::now() - pre_loop_time > std::chrono::seconds(2))
+    {
+      if (got_status)
+      {
+        throw std::runtime_error(kStatusStatusNotReadyMessage);
+      }
+      else
+      {
+        throw std::runtime_error(kStatusPacketFailureMessage);
+      }
     }
   }
   start_time_ = std::chrono::high_resolution_clock::now();
@@ -405,6 +453,27 @@ void FanucClient::stopRealtimeStream()
   {
     rt_thread_.join();
   }
+
+  // Wait for robot to stop motion
+  stream_motion::RobotStatusPacket status;
+  const auto motion_pre_loop_time = std::chrono::steady_clock::now();
+  do
+  {
+    if (std::chrono::steady_clock::now() - motion_pre_loop_time > std::chrono::seconds(1))
+    {
+      break;
+    }
+
+    const auto status_pre_loop_time = std::chrono::steady_clock::now();
+    while (!stream_motion_->getStatusPacket(status))
+    {
+      if (std::chrono::steady_clock::now() - status_pre_loop_time > std::chrono::seconds(1))
+      {
+        throw std::runtime_error(kStatusPacketFailureMessage);
+      }
+    }
+  } while (status.status & 0x8);
+
   rmi_connection_->abort(std::nullopt);
   stream_motion_->sendStopPacket();
 }

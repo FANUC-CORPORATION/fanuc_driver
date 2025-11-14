@@ -340,6 +340,8 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
     rmi_port_ = StringToInt("rmi_port", info_.hardware_parameters["rmi_port"]);
     stream_motion_port_ = StringToInt("stream_motion_port", info_.hardware_parameters["stream_motion_port"]);
     payload_schedule_ = StringToInt("payload_schedule", info_.hardware_parameters["payload_schedule"]);
+    out_cmd_interp_buff_target_ =
+        StringToInt("out_cmd_interp_buff_target", info_.hardware_parameters["out_cmd_interp_buff_target"]);
   }
   catch (const std::exception& e)
   {
@@ -357,6 +359,7 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
     {
       fanuc_client_.reset();
       fanuc_client_ = std::make_unique<fanuc_client::FanucClient>(ip_address_, stream_motion_port_, rmi_port_);
+      fanuc_client_->setOutCmdInterpBuffTarget(out_cmd_interp_buff_target_);
       fanuc_client_->startRMI();
       fanuc_client_->setPayloadSchedule(payload_schedule_);
       fanuc_client_->validateGPIOBuffer(gpio_buffer_);

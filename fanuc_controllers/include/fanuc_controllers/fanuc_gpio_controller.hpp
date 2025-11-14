@@ -18,12 +18,16 @@
 #include "fanuc_msgs/srv/get_bool_io.hpp"
 #include "fanuc_msgs/srv/get_group_io.hpp"
 #include "fanuc_msgs/srv/get_num_reg.hpp"
+#include "fanuc_msgs/srv/get_pos_reg.hpp"
 #include "fanuc_msgs/srv/set_analog_io.hpp"
 #include "fanuc_msgs/srv/set_bool_io.hpp"
 #include "fanuc_msgs/srv/set_gen_override.hpp"
 #include "fanuc_msgs/srv/set_group_io.hpp"
 #include "fanuc_msgs/srv/set_num_reg.hpp"
+#include "fanuc_msgs/srv/set_payload_comp.hpp"
 #include "fanuc_msgs/srv/set_payload_id.hpp"
+#include "fanuc_msgs/srv/set_payload_value.hpp"
+#include "fanuc_msgs/srv/set_pos_reg.hpp"
 
 #include "fanuc_msgs/msg/analog_io_cmd.hpp"
 #include "fanuc_msgs/msg/analog_io_state.hpp"
@@ -75,12 +79,16 @@ private:
   ServicePtr<fanuc_msgs::srv::GetBoolIO> get_bool_io_service_;
   ServicePtr<fanuc_msgs::srv::GetGroupIO> get_group_io_service_;
   ServicePtr<fanuc_msgs::srv::GetNumReg> get_num_reg_service_;
+  ServicePtr<fanuc_msgs::srv::GetPosReg> get_pos_reg_service_;
   ServicePtr<fanuc_msgs::srv::SetAnalogIO> set_analog_io_service_;
   ServicePtr<fanuc_msgs::srv::SetBoolIO> set_bool_io_service_;
   ServicePtr<fanuc_msgs::srv::SetGenOverride> set_gen_override_service_;
   ServicePtr<fanuc_msgs::srv::SetGroupIO> set_group_io_service_;
   ServicePtr<fanuc_msgs::srv::SetNumReg> set_num_reg_service_;
+  ServicePtr<fanuc_msgs::srv::SetPosReg> set_pos_reg_service_;
   ServicePtr<fanuc_msgs::srv::SetPayloadID> set_payload_id_service_;
+  ServicePtr<fanuc_msgs::srv::SetPayloadValue> set_payload_value_service_;
+  ServicePtr<fanuc_msgs::srv::SetPayloadComp> set_payload_comp_service_;
 
   template <typename T>
   using SubscriberPtr = std::shared_ptr<rclcpp::Subscription<T>>;

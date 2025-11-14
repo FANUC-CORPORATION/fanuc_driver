@@ -40,6 +40,7 @@
         <param name="stream_motion_port">$(arg stream_motion_port)</param>
         <param name="gpio_configuration">$(arg gpio_configuration)</param>
         <param name="payload_schedule">$(arg payload_schedule)</param>
+        <param name="out_cmd_interp_buff_target">$(arg out_cmd_interp_buff_target)</param>
       </hardware>
     </ros2_control>
   </xacro:macro>

@@ -44,6 +44,9 @@ private:
   double folag_state_ = 100.0;
   double folag_h_ = 1.0;
   double folag_tau_ = 0.2;  // time constant for first order lag in seconds
+
+  std::optional<std::reference_wrapper<hardware_interface::LoanedStateInterface>> scaling_state_interface_;
+  std::atomic<double> scaling_factor_{ 1.0 };
 };
 
 }  // namespace fanuc_controllers

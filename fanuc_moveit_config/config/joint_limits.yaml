@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# Joint limits for CRX-10iA and CRX-10iA/L
+
 # joint_limits.yaml allows the dynamics properties specified in the URDF to be overwritten or augmented as needed
 
 # Specific joint properties can be changed with the keys [max_position, min_position, max_velocity, max_acceleration]
@@ -12,29 +14,29 @@ joint_limits:
     has_velocity_limits: true
     max_velocity: 2.0943951023931953
     has_acceleration_limits: true
-    max_acceleration: 5.0
+    max_acceleration: 0.4
   J2:
     has_velocity_limits: true
     max_velocity: 2.0943951023931953
     has_acceleration_limits: true
-    max_acceleration: 5.0
+    max_acceleration: 0.4
   J3:
     has_velocity_limits: true
     max_velocity: 3.1415926535897931
     has_acceleration_limits: true
-    max_acceleration: 5.0
+    max_acceleration: 0.4
   J4:
     has_velocity_limits: true
     max_velocity: 3.1415926535897931
     has_acceleration_limits: true
-    max_acceleration: 5.0
+    max_acceleration: 1.0
   J5:
     has_velocity_limits: true
     max_velocity: 3.1415926535897931
     has_acceleration_limits: true
-    max_acceleration: 5.0
+    max_acceleration: 1.0
   J6:
     has_velocity_limits: true
     max_velocity: 3.1415926535897931
     has_acceleration_limits: true
-    max_acceleration: 5.0
+    max_acceleration: 1.0

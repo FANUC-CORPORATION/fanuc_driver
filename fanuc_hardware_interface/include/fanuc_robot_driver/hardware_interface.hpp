@@ -83,6 +83,7 @@ private:
   int32_t payload_schedule_;
   uint16_t stream_motion_port_;
   uint16_t rmi_port_;
+  uint32_t out_cmd_interp_buff_target_;
 
   std::shared_ptr<fanuc_client::GPIOBuffer> gpio_buffer_;
 

@@ -23,6 +23,10 @@ controller_interface::InterfaceConfiguration ScaledJointTrajectoryController::st
   auto state_interface_config = JointTrajectoryController::state_interface_configuration();
   using fanuc_robot_driver::kConnectionStatusName;
   using fanuc_robot_driver::kIsConnectedType;
+  using fanuc_robot_driver::kRobotStatusInterfaceName;
+  using fanuc_robot_driver::kStatusCollaborativeSpeedScalingType;
+  state_interface_config.names.push_back(std::string(kRobotStatusInterfaceName) + "/" +
+                                         kStatusCollaborativeSpeedScalingType);
   state_interface_config.names.push_back(std::string(kConnectionStatusName) + "/" + kIsConnectedType);
   return state_interface_config;
 }
@@ -48,6 +52,19 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
     // The robot state indicated that the robot is no longer connected.
     return controller_interface::return_type::OK;
   }
+  if (!state_interfaces_.empty())
+  {
+    auto it = state_interfaces_.end();
+    --it;  // back
+    --it;  // back - 1
+
+    double tmp_scaling_factor = it->get_value();
+    if (std::isfinite(tmp_scaling_factor))
+    {
+      scaling_factor_ = tmp_scaling_factor;
+    }
+  }
+
   if (!last_is_connected_)
   {
     // The controller should update its reference to use the current state
@@ -148,7 +165,8 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
       }
     }
     double scale_percentage = 0.01 * first_order_lag_filter(static_cast<double>(time_scale_value_.load()));
-    rclcpp::Duration deltatime_scaled = period * scale_percentage;
+    /* original period * scale from topic * scale from robot controller */
+    rclcpp::Duration deltatime_scaled = period * scale_percentage * static_cast<double>(scaling_factor_.load());
     rclcpp::Time sample_time = last_scaled_time_ + deltatime_scaled;
 
     // find segment for current timestamp

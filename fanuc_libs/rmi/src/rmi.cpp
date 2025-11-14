@@ -388,10 +388,10 @@ ReadErrorPacket::Response RMIConnection::readError(const std::optional<double> t
   return getResponsePacket<ReadErrorPacket::Response>(timeout, "Failed to read error. ", std::nullopt);
 }
 
-WritePositionRegisterPacket::Response RMIConnection::writePositionRegister(const int register_number,
-                                                                           const ConfigurationData& configuration,
-                                                                           const PositionData& position,
-                                                                           const std::optional<double> timeout)
+WritePositionRegisterPacket::Response
+RMIConnection::writePositionRegister(const int register_number, const std::string& representation,
+                                     const ConfigurationData& configuration, const PositionData& position,
+                                     const JointAngleData& joint_angle, const std::optional<double> timeout)
 {
   if (register_number < 1 || register_number > 100)
   {
@@ -399,9 +399,19 @@ WritePositionRegisterPacket::Response RMIConnection::writePositionRegister(const
                              ". Valid range is 1 to 100.");
   }
   WritePositionRegisterPacket::Request write_position_register_packet;
-  write_position_register_packet.Configuration = configuration;
-  write_position_register_packet.Position = position;
   write_position_register_packet.RegisterNumber = register_number;
+  write_position_register_packet.Representation = representation;
+  std::string temp_upper_rep = representation;
+  std::transform(temp_upper_rep.begin(), temp_upper_rep.end(), temp_upper_rep.begin(), ::toupper);
+  if (temp_upper_rep == "JOINT")
+  {
+    write_position_register_packet.JointAngle = joint_angle;
+  }
+  else
+  {
+    write_position_register_packet.Configuration = configuration;
+    write_position_register_packet.Position = position;
+  }
   connection_impl_->write(write_position_register_packet);
   return getResponsePacket<WritePositionRegisterPacket::Response>(timeout, "Failed to write to position register. ",
                                                                   std::nullopt);
@@ -418,7 +428,7 @@ ReadPositionRegisterPacket::Response RMIConnection::readPositionRegister(const i
   ReadPositionRegisterPacket::Request read_position_register_packet;
   read_position_register_packet.RegisterNumber = register_number;
   connection_impl_->write(read_position_register_packet);
-  return getResponsePacket<ReadPositionRegisterPacket::Response>(timeout, "Failed to read from the position register. ",
+  return getResponsePacket<ReadPositionRegisterPacket::Response>(timeout, "Failed to read from position register. ",
                                                                  std::nullopt);
 }
 
@@ -536,6 +546,48 @@ SetPayloadPacket::Response RMIConnection::setPayloadSchedule(const uint8_t paylo
   std::scoped_lock lock(motion_mutex_);
   connection_impl_->write(set_payload_packet);
   return getResponsePacket<SetPayloadPacket::Response>(timeout, "Failed to set the payload schedule. ", std::nullopt);
+}
+
+SetPayloadValuePacket::Response RMIConnection::setPayloadValue(const uint8_t payload_schedule_number, const float mass,
+                                                               const float cg_x, const float cg_y, const float cg_z,
+                                                               const bool use_in, const float in_x, const float in_y,
+                                                               const float in_z, const std::optional<double> timeout)
+{
+  SetPayloadValuePacket::Request set_payload_value_packet;
+  set_payload_value_packet.ScheduleNumber = payload_schedule_number;
+  set_payload_value_packet.Mass = mass;
+  set_payload_value_packet.CG_X = cg_x * 100;  // unit conversion: m -> cm (rmi)
+  set_payload_value_packet.CG_Y = cg_y * 100;  // unit conversion: m -> cm (rmi)
+  set_payload_value_packet.CG_Z = cg_z * 100;  // unit conversion: m -> cm (rmi)
+  if (use_in)
+  {
+    set_payload_value_packet.IN_X = in_x * 10000;  // unit conversion: kgm^2 -> kgcm^2 (rmi)
+    set_payload_value_packet.IN_Y = in_y * 10000;  // unit conversion: kgm^2 -> kgcm^2 (rmi)
+    set_payload_value_packet.IN_Z = in_z * 10000;  // unit conversion: kgm^2 -> kgcm^2 (rmi)
+  }
+  std::scoped_lock lock(motion_mutex_);
+  connection_impl_->write(set_payload_value_packet);
+  return getResponsePacket<SetPayloadValuePacket::Response>(timeout, "Failed to set the payload value. ", std::nullopt);
+}
+
+SetPayloadCompPacket::Response RMIConnection::setPayloadComp(const uint8_t payload_schedule_number, const float mass,
+                                                             const float cg_x, const float cg_y, const float cg_z,
+                                                             const float in_x, const float in_y, const float in_z,
+                                                             const std::optional<double> timeout)
+{
+  SetPayloadCompPacket::Request set_payload_comp_packet;
+  set_payload_comp_packet.ScheduleNumber = payload_schedule_number;
+  set_payload_comp_packet.Mass = mass;
+  set_payload_comp_packet.CG_X = cg_x * 100;    // unit conversion: m -> cm (rmi)
+  set_payload_comp_packet.CG_Y = cg_y * 100;    // unit conversion: m -> cm (rmi)
+  set_payload_comp_packet.CG_Z = cg_z * 100;    // unit conversion: m -> cm (rmi)
+  set_payload_comp_packet.IN_X = in_x * 10000;  // unit conversion: kgm^2 -> kgcm^2 (rmi)
+  set_payload_comp_packet.IN_Y = in_y * 10000;  // unit conversion: kgm^2 -> kgcm^2 (rmi)
+  set_payload_comp_packet.IN_Z = in_z * 10000;  // unit conversion: kgm^2 -> kgcm^2 (rmi)
+  std::scoped_lock lock(motion_mutex_);
+  connection_impl_->write(set_payload_comp_packet);
+  return getResponsePacket<SetPayloadCompPacket::Response>(timeout, "Failed to set the payload compensation. ",
+                                                           std::nullopt);
 }
 
 ReadJointAnglesPacket::Response RMIConnection::readJointAngles(const std::optional<uint8_t>& group,

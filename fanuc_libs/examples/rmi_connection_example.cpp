@@ -72,12 +72,16 @@ int main()
   // TODO: FRC_WriteVariable command is currently not recognized by the robot controller
   // rmi_connection.writeVariablePacket("$STMO.$PHYS_PORT", 2);
 
+  std::string representation;
+  representation = "Cartesian";
   rmi::ConfigurationData configuration;
   configuration.Front = 1;
   rmi::PositionData position;
   position.P = 1.5;
   position.W = 2.5;
-  const auto write_position_register_packet = rmi_connection.writePositionRegister(1, configuration, position, 1);
+  rmi::JointAngleData joint_angle;
+  const auto write_position_register_packet =
+      rmi_connection.writePositionRegister(1, representation, configuration, position, joint_angle, 1);
   const auto read_position_register_packet = rmi_connection.readPositionRegister(1, std::nullopt);
 
   const auto read_digital_input_port_packet = rmi_connection.readDigitalInputPort(81, std::nullopt);

@@ -33,6 +33,8 @@ template std::string ToJSON<ReadPositionRegisterPacket::Request>(const ReadPosit
 template std::string ToJSON<ReadDigitalInputPortPacket::Request>(const ReadDigitalInputPortPacket::Request&);
 template std::string ToJSON<WriteDigitalOutputPacket::Request>(const WriteDigitalOutputPacket::Request&);
 template std::string ToJSON<SetPayloadPacket::Request>(const SetPayloadPacket::Request&);
+template std::string ToJSON<SetPayloadValuePacket::Request>(const SetPayloadValuePacket::Request&);
+template std::string ToJSON<SetPayloadCompPacket::Request>(const SetPayloadCompPacket::Request&);
 template std::string ToJSON<ReadNumericRegisterPacket::Request>(const ReadNumericRegisterPacket::Request&);
 template std::string ToJSON<WriteNumericRegisterPacket::Request>(const WriteNumericRegisterPacket::Request&);
 template std::string ToJSON<WriteIOPortPacket::Request>(const WriteIOPortPacket::Request&);

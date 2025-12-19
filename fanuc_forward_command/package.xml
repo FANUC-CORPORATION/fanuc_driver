@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 -->
 <package format="3">
   <name>fanuc_forward_command</name>
-  <version>1.0.0</version>
+  <version>1.1.1</version>
   <description>FANUC robot forward command controller configuration and sine wave generator</description>
   <maintainer email="fanuc-ros-maintainer@fanuc.co.jp">FANUC CORPORATION</maintainer>
   <license>Apache-2.0</license>

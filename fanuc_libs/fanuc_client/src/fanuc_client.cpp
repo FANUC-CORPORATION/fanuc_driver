@@ -6,8 +6,10 @@
 #include "fanuc_client/fanuc_client.hpp"
 
 #include <Eigen/Core>
+#include <csignal>
 #include <cstdint>
 #include <iostream>
+#include <mutex>
 #include <utility>
 
 #include "fanuc_client/gpio_buffer.hpp"
@@ -16,6 +18,11 @@
 
 namespace fanuc_client
 {
+// Static member initialization
+FanucClient* FanucClient::instance_ = nullptr;
+std::mutex FanucClient::instance_mutex_;
+struct sigaction FanucClient::previous_sigaction_;
+
 namespace
 {
 constexpr double kFullPayload = 7.0;
@@ -94,15 +101,73 @@ FanucClient::FanucClient(std::string robot_ip, const uint16_t stream_motion_port
   stream_motion_->getControllerCapability(controller_capability);
   control_period_ = controller_capability.sampling_rate;
   fetchRobotLimits();
+
+  setupSignalHandler();
 }
 
 FanucClient::~FanucClient()
 {
   if (is_streaming_)
   {
-    stopRealtimeStream();
+    try
+    {
+      std::cout << "Stopping realtime stream during destruction" << std::endl;
+      stopRealtimeStream();
+    }
+    catch (const std::exception& e)
+    {
+      // During destruction, network might already be down or robot disconnected
+      // Log the error but don't throw to avoid std::terminate
+      std::cerr << "Warning: Failed to stop realtime stream during FanucClient destruction: " << e.what() << std::endl;
+    }
   }
-  rmi_connection_->disconnect(std::nullopt);
+  else
+  {
+    try
+    {
+      std::cout << "Aborting RMI connection during destruction" << std::endl;
+      rmi_connection_->abort(std::nullopt);
+    }
+    catch (const std::exception& e)
+    {
+      std::cerr << "Warning: Failed to abort RMI connection during destruction (connection may be lost): " << e.what()
+                << std::endl;
+    }
+    catch (...)
+    {
+      std::cerr << "Warning: Unknown exception during RMI abort (connection may be lost)" << std::endl;
+    }
+
+    try
+    {
+      std::cout << "Sending stop packet during destruction" << std::endl;
+      stream_motion_->sendStopPacket();
+    }
+    catch (const std::exception& e)
+    {
+      std::cerr << "Warning: Failed to send stop packet during destruction: " << e.what() << std::endl;
+    }
+    catch (...)
+    {
+      std::cerr << "Warning: Unknown exception during stop packet send" << std::endl;
+    }
+  }
+
+  try
+  {
+    rmi_connection_->disconnect(std::nullopt);
+  }
+  catch (const std::exception& e)
+  {
+    std::cerr << "Warning: Failed to disconnect RMI during destruction (connection may be lost): " << e.what()
+              << std::endl;
+  }
+  catch (...)
+  {
+    std::cerr << "Warning: Unknown exception during RMI disconnect" << std::endl;
+  }
+
+  restoreSignalHandler();
 }
 
 void FanucClient::readStateFromQueue()
@@ -502,6 +567,47 @@ void FanucClient::validateGPIOBuffer(const std::shared_ptr<GPIOBuffer>& gpio_buf
       throw std::runtime_error(
           "Failed to configure GPIO buffer. Ensure the GPIO buffer is correctly set up for the robot.");
     }
+  }
+}
+
+void FanucClient::stopStreaming()
+{
+  is_streaming_ = false;
+}
+
+void FanucClient::signalHandler(int signal)
+{
+  if (signal == SIGINT)
+  {
+    std::lock_guard<std::mutex> lock(instance_mutex_);
+    if (instance_ != nullptr)
+    {
+      // Stop streaming to allow proper cleanup
+      instance_->stopStreaming();
+    }
+  }
+}
+
+void FanucClient::setupSignalHandler()
+{
+  std::lock_guard<std::mutex> lock(instance_mutex_);
+  instance_ = this;
+  struct sigaction sa;
+  sa.sa_handler = signalHandler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  // Save previous handler and install new one
+  sigaction(SIGINT, &sa, &previous_sigaction_);
+}
+
+void FanucClient::restoreSignalHandler()
+{
+  std::lock_guard<std::mutex> lock(instance_mutex_);
+  if (instance_ == this)
+  {
+    instance_ = nullptr;
+    // Restore previous signal handler using sigaction (consistent with setup)
+    sigaction(SIGINT, &previous_sigaction_, nullptr);
   }
 }
 

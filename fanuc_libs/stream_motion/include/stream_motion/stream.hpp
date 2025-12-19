@@ -94,7 +94,8 @@ public:
   bool getControllerCapability(ControllerCapabilityResultPacket& controller_capability) const override;
 
 private:
-  uint32_t sequence_no_ = 0;
+  uint32_t status_sequence_no_ = 0;
+  uint32_t command_sequence_no_ = 0;
 
   struct PSocketImpl;
   std::unique_ptr<PSocketImpl> socket_impl_;

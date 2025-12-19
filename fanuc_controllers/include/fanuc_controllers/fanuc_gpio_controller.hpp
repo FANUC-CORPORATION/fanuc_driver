@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <filesystem>
 #include <std_msgs/msg/detail/bool__builder.hpp>
 #include <std_msgs/msg/detail/float64__struct.hpp>
@@ -72,6 +73,7 @@ private:
 
   std::shared_ptr<rclcpp::TimerBase> robot_status_ext_timer_;
   rclcpp::CallbackGroup::SharedPtr reentrant_group_;
+  std::atomic<bool> shutting_down_{ false };
 
   template <typename T>
   using ServicePtr = std::shared_ptr<rclcpp::Service<T>>;

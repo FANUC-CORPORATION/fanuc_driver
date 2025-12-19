@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <csignal>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -65,6 +67,8 @@ public:
 
   void stopRealtimeStream();
 
+  void stopStreaming();
+
   bool isStreaming();
 
   void startRMI();
@@ -92,6 +96,25 @@ public:
   {
     return robot_status_;
   }
+
+private:
+  /** Setup signal handler for SIGINT */
+  void setupSignalHandler();
+
+  /** Restore previous signal handler */
+  void restoreSignalHandler();
+
+  /** Static signal handler function */
+  static void signalHandler(int signal);
+
+  /** Static pointer to current instance for signal handler */
+  static FanucClient* instance_;
+
+  /** Mutex to protect instance_ access from signal handler */
+  static std::mutex instance_mutex_;
+
+  /** Previous signal handler to restore */
+  static struct sigaction previous_sigaction_;
 
 private:
   void readStateFromQueue();

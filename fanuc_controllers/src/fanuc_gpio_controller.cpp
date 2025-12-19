@@ -525,6 +525,43 @@ void FanucGPIOController::publishRobotStatusExt()
 {
   try
   {
+    // Early return if shutting down
+    if (shutting_down_.load())
+    {
+      return;
+    }
+
+    // Check if publisher is still valid (ROS2 context might be shutting down)
+    if (!robot_status_ext_publisher_)
+    {
+      return;
+    }
+
+    // Check if node context is still valid
+    auto node = get_node();
+    if (!node)
+    {
+      return;
+    }
+
+    // Check context validity - this might throw during shutdown
+    bool context_valid = false;
+    try
+    {
+      context_valid = node->get_node_base_interface()->get_context()->is_valid();
+    }
+    catch (...)
+    {
+      // Context is being destroyed
+      return;
+    }
+
+    if (!context_valid)
+    {
+      return;
+    }
+
+    // Try to get RMI instance and publish - all operations might fail during shutdown
     rmi::GetExtendedStatusPacket::Response robot_status_ext = getRMIInstance()->getExtendedStatus(1.0);
     robot_status_ext_msg_.drives_powered = robot_status_ext.DrivesPowered;
     robot_status_ext_msg_.error_code = robot_status_ext.ErrorCode.has_value() ? robot_status_ext.ErrorCode.value() : "";
@@ -534,16 +571,26 @@ void FanucGPIOController::publishRobotStatusExt()
         robot_status_ext.SpeedClampLimit.has_value() ? robot_status_ext.SpeedClampLimit.value() : 0.0;
     robot_status_ext_msg_.control_mode =
         robot_status_ext.ControlMode.has_value() ? robot_status_ext.ControlMode.value() : "";
-    robot_status_ext_publisher_->publish(robot_status_ext_msg_);
+
+    // Final check before publishing - publisher might be invalid even if pointer is valid
+    if (robot_status_ext_publisher_)
+    {
+      robot_status_ext_publisher_->publish(robot_status_ext_msg_);
+    }
   }
-  catch (const std::exception& e)
+  catch (...)
   {
+    // Catch ALL exceptions including segfaults that manifest as exceptions
+    // Silently ignore during shutdown
   }
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
 {
+  // Reset shutdown flag when configuring
+  shutting_down_.store(false);
+
   const gpio_config::GPIOTopicConfig gpio_topic_config =
       gpio_config::ParseGPIOConfig(GetFilePath(get_node())).gpio_topic_config;
 
@@ -943,6 +990,17 @@ controller_interface::return_type FanucGPIOController::update(const rclcpp::Time
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 FanucGPIOController::on_deactivate(const rclcpp_lifecycle::State& previous_state)
 {
+  // Set shutdown flag first to prevent timer callback from executing
+  shutting_down_.store(true);
+
+  // Reset publisher FIRST so any in-flight callbacks will see null pointer
+  robot_status_ext_publisher_.reset();
+
+  // Cancel and reset timer immediately
+  if (robot_status_ext_timer_)
+  {
+    robot_status_ext_timer_->cancel();
+  }
   robot_status_ext_timer_.reset();
 
   // Reset all publishers

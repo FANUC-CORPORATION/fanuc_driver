@@ -356,7 +356,7 @@ void StreamMotionConnection::sendCommand(const std::array<double, kMaxAxisNumber
   command.command_pos = command_pos;
   command.packet_type = kJerkLimitCommandPacketType;
   command.version_no = kVersion;
-  command.sequence_no = sequence_no_;
+  command.sequence_no = command_sequence_no_;
   command.is_last_command = is_last_command;
   command.do_motn_ctrl = 1;
   command.unused = kCommandPacketUnused;
@@ -367,19 +367,39 @@ void StreamMotionConnection::sendCommand(const std::array<double, kMaxAxisNumber
 
 bool StreamMotionConnection::getStatusPacket(RobotStatusPacket& status)
 {
-  status = RobotStatusPacket{};
-  if (!socket_impl_->receive(status))
+  if (command_sequence_no_ == status_sequence_no_)
   {
+    status = RobotStatusPacket{};
+    if (!socket_impl_->receive(status))
+    {
+      std::cerr << "Fail to get status packet." << std::endl;
+      return false;
+    }
+    status_sequence_no_++;
+    // Swap the bits of the received status packet
+    swapRobotStatusPacketBytes(status);
+    if (status_sequence_no_ != status.sequence_no)
+    {
+      std::cerr << "Status seq skipped. Expected seq: " << status_sequence_no_
+                << " Received seq: " << status.sequence_no << std::endl;
+      status_sequence_no_ = status.sequence_no;
+    }
+  }
+  else if (command_sequence_no_ < status_sequence_no_)
+  {
+    std::cerr << "Command lagging behind. Command seq: " << command_sequence_no_
+              << " Status seq: " << status_sequence_no_ << std::endl;
+    std::cerr << "Sending extra command to catch up." << std::endl;
+  }
+  else
+  {
+    std::cerr << "Command seq exceeded status seq. Command seq: " << command_sequence_no_
+              << " Status seq: " << status_sequence_no_ << std::endl;
+    std::cerr << "This should not happen. Something is wrong. Need to abort." << std::endl;
     return false;
   }
-  // Swap the bits of the received status packet
-  swapRobotStatusPacketBytes(status);
-  if (sequence_no_ + 1 != status.sequence_no)
-  {
-    // Temp ignore sequence number mismatch
-    // return false;
-  }
-  sequence_no_ = status.sequence_no;
+
+  command_sequence_no_++;
 
   return true;
 }

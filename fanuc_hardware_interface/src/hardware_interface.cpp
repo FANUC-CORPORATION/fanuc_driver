@@ -5,6 +5,7 @@
 
 #include "fanuc_robot_driver/hardware_interface.hpp"
 
+#include <chrono>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -452,34 +453,70 @@ hardware_interface::return_type FanucHardwareInterface::read(const rclcpp::Time&
   robot_status_.is_connected = fanuc_client_ != nullptr && fanuc_client_->isStreaming();
   if (!robot_status_.is_connected)
   {
-    fanuc_client_->stopRealtimeStream();
-    RCLCPP_ERROR(rclcpp::get_logger(kFRHWInterface), "FANUC ROS2 HW no longer streaming.");
+    if (fanuc_client_ != nullptr)
+    {
+      try
+      {
+        fanuc_client_->stopRealtimeStream();
+      }
+      catch (const std::runtime_error& e)
+      {
+        RCLCPP_DEBUG(rclcpp::get_logger(kFRHWInterface), "Stream already stopped: %s", e.what());
+      }
+      catch (...)
+      {
+        // Catch any other exceptions during shutdown
+        RCLCPP_DEBUG(rclcpp::get_logger(kFRHWInterface), "Exception during stream shutdown (likely normal)");
+      }
+    }
+
+    static auto last_log_time = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_log_time).count() > 5000)
+    {
+      RCLCPP_WARN(rclcpp::get_logger(kFRHWInterface),
+                  "FANUC ROS2 HW no longer streaming (this is normal during shutdown).");
+      last_log_time = now;
+    }
     return hardware_interface::return_type::ERROR;
   }
 
-  fr_prev_joint_pos_ = fr_joint_pos_;
-  const Eigen::Ref<const Eigen::VectorXd> joint_angles = fanuc_client_->readJointAngles();
-  for (Eigen::Index i = 0; i < joint_angles.size(); ++i)
+  try
   {
-    fr_joint_pos_[i] = M_PI / 180.0 * joint_angles[i];
-  }
-  if ((fr_prev_joint_pos_.array() != fr_joint_pos_.array()).any())
-  {
-    const double dt = static_cast<double>(fanuc_client_->getControlPeriod()) / 1000.0;
-    fr_joint_vel_ = (fr_joint_pos_ - fr_prev_joint_pos_) / dt;
-  }
+    fr_prev_joint_pos_ = fr_joint_pos_;
+    const Eigen::Ref<const Eigen::VectorXd> joint_angles = fanuc_client_->readJointAngles();
+    for (Eigen::Index i = 0; i < joint_angles.size(); ++i)
+    {
+      fr_joint_pos_[i] = M_PI / 180.0 * joint_angles[i];
+    }
+    if ((fr_prev_joint_pos_.array() != fr_joint_pos_.array()).any())
+    {
+      const double dt = static_cast<double>(fanuc_client_->getControlPeriod()) / 1000.0;
+      fr_joint_vel_ = (fr_joint_pos_ - fr_prev_joint_pos_) / dt;
+    }
 
-  for (const auto& io_state : io_state_)
-  {
-    io_state->updateValue();
-  }
+    for (const auto& io_state : io_state_)
+    {
+      io_state->updateValue();
+    }
 
-  robot_status_.in_error = fanuc_client_->robot_status().in_error;
-  robot_status_.tp_enabled = fanuc_client_->robot_status().tp_enabled;
-  robot_status_.e_stopped = fanuc_client_->robot_status().e_stopped;
-  robot_status_.motion_possible = fanuc_client_->robot_status().motion_possible;
-  robot_status_.contact_stop_mode = static_cast<double>(fanuc_client_->robot_status().contact_stop_mode);
-  robot_status_.collaborative_speed_scaling = static_cast<double>(fanuc_client_->robot_status().safety_scale);
+    robot_status_.in_error = fanuc_client_->robot_status().in_error;
+    robot_status_.tp_enabled = fanuc_client_->robot_status().tp_enabled;
+    robot_status_.e_stopped = fanuc_client_->robot_status().e_stopped;
+    robot_status_.motion_possible = fanuc_client_->robot_status().motion_possible;
+    robot_status_.contact_stop_mode = static_cast<double>(fanuc_client_->robot_status().contact_stop_mode);
+    robot_status_.collaborative_speed_scaling = static_cast<double>(fanuc_client_->robot_status().safety_scale);
+  }
+  catch (const std::exception& e)
+  {
+    RCLCPP_DEBUG(rclcpp::get_logger(kFRHWInterface), "Exception during read (likely shutdown): %s", e.what());
+    return hardware_interface::return_type::ERROR;
+  }
+  catch (...)
+  {
+    RCLCPP_DEBUG(rclcpp::get_logger(kFRHWInterface), "Unknown exception during read (likely shutdown)");
+    return hardware_interface::return_type::ERROR;
+  }
 
   return hardware_interface::return_type::OK;
 }
@@ -489,18 +526,56 @@ hardware_interface::return_type FanucHardwareInterface::write(const rclcpp::Time
   robot_status_.is_connected = fanuc_client_ != nullptr && fanuc_client_->isStreaming();
   if (!robot_status_.is_connected)
   {
-    fanuc_client_->stopRealtimeStream();
-    RCLCPP_ERROR(rclcpp::get_logger(kFRHWInterface), "FANUC ROS2 HW no longer streaming.");
+    if (fanuc_client_ != nullptr)
+    {
+      try
+      {
+        fanuc_client_->stopRealtimeStream();
+      }
+      catch (const std::runtime_error& e)
+      {
+        RCLCPP_DEBUG(rclcpp::get_logger(kFRHWInterface), "Stream already stopped: %s", e.what());
+      }
+      catch (...)
+      {
+        RCLCPP_DEBUG(rclcpp::get_logger(kFRHWInterface), "Exception during stream shutdown (likely normal)");
+      }
+    }
+    // Throttle to avoid spam during shutdown
+    static auto last_log_time = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_log_time).count() > 5000)
+    {
+      RCLCPP_WARN(rclcpp::get_logger(kFRHWInterface),
+                  "FANUC ROS2 HW no longer streaming (this is normal during shutdown).");
+      last_log_time = now;
+    }
     return hardware_interface::return_type::ERROR;
   }
-  joint_targets_degrees_.array() = 180.0 / M_PI * joint_targets_.array();
-  fanuc_client_->writeJointTarget(joint_targets_degrees_);
 
-  for (const auto& io_command : io_commands_)
+  try
   {
-    io_command->updateBuffer();
+    joint_targets_degrees_.array() = 180.0 / M_PI * joint_targets_.array();
+    fanuc_client_->writeJointTarget(joint_targets_degrees_);
+
+    for (const auto& io_command : io_commands_)
+    {
+      io_command->updateBuffer();
+    }
+    fanuc_client_->sendIOCommand();
   }
-  fanuc_client_->sendIOCommand();
+  catch (const std::exception& e)
+  {
+    // During shutdown, operations may fail - log but don't crash
+    RCLCPP_DEBUG(rclcpp::get_logger(kFRHWInterface), "Exception during write (likely shutdown): %s", e.what());
+    return hardware_interface::return_type::ERROR;
+  }
+  catch (...)
+  {
+    // Catch any other exceptions during shutdown
+    RCLCPP_DEBUG(rclcpp::get_logger(kFRHWInterface), "Unknown exception during write (likely shutdown)");
+    return hardware_interface::return_type::ERROR;
+  }
 
   return hardware_interface::return_type::OK;
 }

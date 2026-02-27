@@ -61,7 +61,7 @@ ament_target_dependencies(scaled_joint_trajectory_controller
 )
 target_link_libraries(scaled_joint_trajectory_controller fanuc_hardware_interface::fanuc_hardware_interface_constants)
 
-# Build the FANUC GPIO controller controller library
+# Build the FANUC GPIO controller library
 add_library(fanuc_gpio_controller SHARED
     src/fanuc_gpio_controller.cpp
 )
@@ -84,6 +84,29 @@ ament_target_dependencies(fanuc_gpio_controller
 target_link_libraries(fanuc_gpio_controller fanuc_libs::fanuc_client fanuc_libs::gpio_config
     fanuc_hardware_interface::fanuc_hardware_interface_constants)
 
+# Build the FANUC force sensor broadcaster library
+add_library(fanuc_force_sensor_broadcaster SHARED
+    src/fanuc_force_sensor_broadcaster.cpp
+)
+
+# Link dependencies
+ament_target_dependencies(fanuc_force_sensor_broadcaster
+    ament_index_cpp
+    controller_interface
+    controller_manager_msgs
+    fanuc_msgs
+    hardware_interface
+    joint_trajectory_controller
+    lifecycle_msgs
+    pluginlib
+    rclcpp
+    realtime_tools
+    std_msgs
+    trajectory_msgs
+)
+target_link_libraries(fanuc_force_sensor_broadcaster fanuc_libs::fanuc_client
+    fanuc_hardware_interface::fanuc_hardware_interface_constants)
+
 if (BUILD_TESTING)
   find_package(GTest REQUIRED)
   include(GoogleTest)
@@ -93,7 +116,7 @@ endif ()
 
 # Install the library
 install(TARGETS
-    scaled_joint_trajectory_controller fanuc_gpio_controller
+    scaled_joint_trajectory_controller fanuc_gpio_controller fanuc_force_sensor_broadcaster
     DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -101,11 +124,13 @@ install(TARGETS
 install(FILES
     scaled_joint_trajectory_controller_plugins.xml
     fanuc_gpio_controller_plugins.xml
+    fanuc_force_sensor_broadcaster_plugins.xml
     DESTINATION share/${PROJECT_NAME}
 )
 
 # Export pluginlib plugins
 pluginlib_export_plugin_description_file(controller_interface scaled_joint_trajectory_controller_plugins.xml)
 pluginlib_export_plugin_description_file(controller_interface fanuc_gpio_controller_plugins.xml)
+pluginlib_export_plugin_description_file(controller_interface fanuc_force_sensor_broadcaster_plugins.xml)
 
 ament_package()

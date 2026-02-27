@@ -19,4 +19,13 @@ constexpr auto kStatusCollaborativeSpeedScalingType = "collaborative_speed_scali
 constexpr auto kConnectionStatusName = "ConnectionStatus";
 constexpr auto kIsConnectedType = "is_connected";
 
+constexpr auto kForceInterfaceName = "Force";
+constexpr auto kForceXType = "force_x";
+constexpr auto kForceYType = "force_y";
+constexpr auto kForceZType = "force_z";
+constexpr auto kMomentXType = "moment_x";
+constexpr auto kMomentYType = "moment_y";
+constexpr auto kMomentZType = "moment_z";
+constexpr auto kForceSensorType = "fs_type";
+
 }  // namespace fanuc_robot_driver

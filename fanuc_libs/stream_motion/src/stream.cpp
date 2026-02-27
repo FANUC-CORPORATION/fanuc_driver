@@ -20,10 +20,6 @@ namespace stream_motion
 {
 namespace
 {
-constexpr int32_t kVersion = 2;
-constexpr int32_t kStopPacketType = 2;
-constexpr int32_t kStartPacketType = 200;
-constexpr uint32_t kJerkLimitCommandPacketType = 201;
 constexpr uint16_t kCommandPacketUnused = 0xFFFF;
 constexpr int kThresholdPayloadLength = 20;
 
@@ -172,8 +168,8 @@ bool StreamMotionConnection::getRobotLimits(const uint32_t axis_number, RobotThr
     throw std::out_of_range("Axis number must be between 1 and 9.");
   }
   ThresholdPacket threshold_packet{};
-  threshold_packet.packet_type = swapBytesIfNeeded(3);
-  threshold_packet.version_no = swapBytesIfNeeded(1);
+  threshold_packet.packet_type = swapBytesIfNeeded(threshold_packet.packet_type);
+  threshold_packet.version_no = swapBytesIfNeeded(version_no_);
   threshold_packet.axis_number = swapBytesIfNeeded(axis_number);
   // Velocity limits
   threshold_packet.threshold_type = swapBytesIfNeeded(0);
@@ -208,8 +204,7 @@ bool StreamMotionConnection::configureGPIO(const GPIOConfiguration& config) cons
   ValidateGPIOConfig(config);
 
   GPIOConfigPacket gpio_config_packet{};
-  gpio_config_packet.packet_type = 203;
-  gpio_config_packet.version_no = 3;
+  gpio_config_packet.version_no = version_no_;
   gpio_config_packet.gpio_configuration = config;
   swapGPIOConfigPacketBytes(gpio_config_packet);
 
@@ -232,20 +227,21 @@ bool StreamMotionConnection::configureGPIO(const GPIOConfiguration& config) cons
   return true;
 }
 
-bool StreamMotionConnection::getControllerCapability(ControllerCapabilityResultPacket& controller_capability) const
+bool StreamMotionConnection::getControllerCapability(ControllerCapabilityResultPacket& controller_capability)
 {
   ControllerCapabilityPacket controller_capability_packet{};
-  controller_capability_packet.packet_type = 7;  // Read capability
-  controller_capability_packet.version_no = 3;
+  controller_capability_packet.packet_type = kGetCapabilityPacketType;
+  controller_capability_packet.version_no = version_no_;
   swapControllerCapabilityBytes(controller_capability_packet);
   socket_impl_->send(controller_capability_packet);
   controller_capability = ControllerCapabilityResultPacket{};
   if (!socket_impl_->receive(controller_capability))
   {
-    std::cerr << "Failed to get response from IO configuration." << std::endl;
+    std::cerr << "Failed to get response for controller capability." << std::endl;
     return false;
   }
   swapControllerCapabilityResponseBytes(controller_capability);
+  version_no_ = controller_capability.available_version;
 
   return true;
 }
@@ -253,17 +249,32 @@ bool StreamMotionConnection::getControllerCapability(ControllerCapabilityResultP
 void StreamMotionConnection::sendStartPacket() const
 {
   StartPacket start_packet{};
-  start_packet.packet_type = swapBytesIfNeeded(kStartPacketType);
-  start_packet.version_no = swapBytesIfNeeded(kVersion);
+  start_packet.packet_type = swapBytesIfNeeded(start_packet.packet_type);
+  start_packet.version_no = swapBytesIfNeeded(version_no_);
   socket_impl_->send(start_packet);
 }
 
 void StreamMotionConnection::sendStopPacket() const
 {
   StopPacket stop_packet{};
-  stop_packet.packet_type = swapBytesIfNeeded(kStopPacketType);
-  stop_packet.version_no = swapBytesIfNeeded(kVersion);
+  stop_packet.packet_type = swapBytesIfNeeded(stop_packet.packet_type);
+  stop_packet.version_no = swapBytesIfNeeded(version_no_);
   socket_impl_->send(stop_packet);
+}
+
+void StreamMotionConnection::configureForceSensor(uint32_t do_reset, uint32_t force_sensor_type) const
+{
+  // Skip if client version smaller than 4 to keep backward compatibility
+  // Otherwise HOST-380 System error 0x19,0x0 will be posted due to unknown packet type
+  if (version_no_ >= 4)
+  {
+    ForceSensorConfigPacket force_sensor_config_packet{};
+    force_sensor_config_packet.packet_type = swapBytesIfNeeded(force_sensor_config_packet.packet_type);
+    force_sensor_config_packet.version_no = swapBytesIfNeeded(version_no_);
+    force_sensor_config_packet.do_reset = swapBytesIfNeeded(do_reset);
+    force_sensor_config_packet.fs_type = swapBytesIfNeeded(force_sensor_type);
+    socket_impl_->send(force_sensor_config_packet);
+  }
 }
 
 void swapCommandPacketBytes(CommandPacket& command)
@@ -292,6 +303,13 @@ void swapRobotStatusPacketBytes(RobotStatusPacket& status)
     status.position[idx] = swapBytesIfNeeded(status.position[idx]);
     status.current[idx] = swapBytesIfNeeded(status.current[idx]);
   }
+  status.force_x = swapBytesIfNeeded(status.force_x);
+  status.force_y = swapBytesIfNeeded(status.force_y);
+  status.force_z = swapBytesIfNeeded(status.force_z);
+  status.moment_x = swapBytesIfNeeded(status.moment_x);
+  status.moment_y = swapBytesIfNeeded(status.moment_y);
+  status.moment_z = swapBytesIfNeeded(status.moment_z);
+  status.fs_type = swapBytesIfNeeded(status.fs_type);
   // Skip io_status since this is always expected to be little endian.
 }
 
@@ -353,9 +371,8 @@ void StreamMotionConnection::sendCommand(const std::array<double, kMaxAxisNumber
                                          const bool is_last_command, const std::array<uint8_t, 256>& io_command) const
 {
   CommandPacket command{};
+  command.version_no = version_no_;
   command.command_pos = command_pos;
-  command.packet_type = kJerkLimitCommandPacketType;
-  command.version_no = kVersion;
   command.sequence_no = command_sequence_no_;
   command.is_last_command = is_last_command;
   command.do_motn_ctrl = 1;
@@ -370,14 +387,50 @@ bool StreamMotionConnection::getStatusPacket(RobotStatusPacket& status)
   if (command_sequence_no_ == status_sequence_no_)
   {
     status = RobotStatusPacket{};
-    if (!socket_impl_->receive(status))
+    bool received = false;
+
+    // Check version_no_ and create dummy status packet if needed to keep backward compatibility
+    // ROS 2 will always use the newest status packet RobotStatusPacket
+    if (version_no_ <= 3)
+    {
+      V3RobotStatusPacket dummy_status{};
+      received = socket_impl_->receive(dummy_status);
+      if (received)
+      {
+        // Calculate start pointer for the last 256 bytes (io points)
+        char* status_io_ptr = reinterpret_cast<char*>(&status) + (sizeof(RobotStatusPacket) - kMaxIOSize);
+        char* dummy_status_io_ptr = reinterpret_cast<char*>(&dummy_status) + (sizeof(V3RobotStatusPacket) - kMaxIOSize);
+
+        // Copy data from dummy_status to status
+        std::memcpy(&status, &dummy_status, sizeof(V3RobotStatusPacket) - kMaxIOSize);
+        std::memcpy(status_io_ptr, dummy_status_io_ptr, kMaxIOSize);
+
+        // Set all the status forces to 0
+        status.force_x = 0.0;
+        status.force_y = 0.0;
+        status.force_z = 0.0;
+        status.moment_x = 0.0;
+        status.moment_y = 0.0;
+        status.moment_z = 0.0;
+        status.fs_type = 0;
+      }
+    }
+    else
+    {
+      received = socket_impl_->receive(status);
+    }
+
+    if (!received)
     {
       std::cerr << "Fail to get status packet." << std::endl;
       return false;
     }
+
     status_sequence_no_++;
+
     // Swap the bits of the received status packet
     swapRobotStatusPacketBytes(status);
+
     if (status_sequence_no_ != status.sequence_no)
     {
       std::cerr << "Status seq skipped. Expected seq: " << status_sequence_no_

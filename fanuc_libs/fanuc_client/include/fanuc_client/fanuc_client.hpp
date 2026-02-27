@@ -39,6 +39,17 @@ struct RobotStatus
   float safety_scale;
 };
 
+struct ForceSensor
+{
+  float force_x;
+  float force_y;
+  float force_z;
+  float moment_x;
+  float moment_y;
+  float moment_z;
+  uint32_t fs_type;
+};
+
 class FanucClient
 {
 public:
@@ -92,9 +103,39 @@ public:
     return out_cmd_interp_buff_target_;
   }
 
+  void setForceSensorType(uint32_t force_sensor_type)
+  {
+    force_sensor_type_ = force_sensor_type;
+  }
+
+  uint32_t getForceSensorType() const
+  {
+    return force_sensor_type_;
+  }
+
   const RobotStatus& robot_status() const
   {
     return robot_status_;
+  }
+
+  const ForceSensor& force_sensor() const
+  {
+    return force_sensor_;
+  }
+
+  void configureForceSensor(uint32_t do_reset, uint32_t force_sensor_type) const;
+
+  // Get static instance
+  static FanucClient* get_instance()
+  {
+    std::lock_guard<std::mutex> lock(instance_mutex_);
+    return instance_;
+  }
+
+  // Get client (stream motion) version
+  uint32_t getClientVersion() const
+  {
+    return client_version_;
   }
 
 private:
@@ -145,7 +186,9 @@ private:
   Eigen::VectorXd last_joint_angles_ = Eigen::VectorXd::Zero(9);
   Eigen::VectorXd last_joint_angles_cmd_ = Eigen::VectorXd::Zero(9);
   RobotStatus robot_status_;
+  ForceSensor force_sensor_;
   uint32_t control_period_ = 0;
+  uint32_t client_version_ = 0;  // stream motion client version
 
   // IO data only accessed from the non-realitime thread.
   std::shared_ptr<GPIOBuffer> gpio_buffer_;
@@ -159,6 +202,9 @@ private:
 
   // Output command interpolation buffer target size for stream motion control
   uint32_t out_cmd_interp_buff_target_;
+
+  // Force sensor default type
+  uint32_t force_sensor_type_;
 
   struct PQueueImpl;
   std::unique_ptr<PQueueImpl> p_queue_impl_;

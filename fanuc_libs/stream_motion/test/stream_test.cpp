@@ -36,13 +36,12 @@ public:
   static stream_motion::RobotStatusPacket createStatusPacket(const int sequence_no)
   {
     stream_motion::RobotStatusPacket status;
+    status.sequence_no = sequence_no;
     status.status = 4;
-    status.packet_type = 0;
-    status.version_no = 3;
+    status.robot_status = 0;
     status.position = kDefaultVector;
     status.joint_angle = kDefaultVector;
     status.current = kDefaultVector;
-    status.sequence_no = sequence_no;
     return status;
   }
 
@@ -54,7 +53,7 @@ public:
     assert(res.value() == sizeof(start_packet));
     start_packet.version_no = stream_motion::swapBytesIfNeeded(start_packet.version_no);
     start_packet.packet_type = stream_motion::swapBytesIfNeeded(start_packet.packet_type);
-    EXPECT_EQ(start_packet.version_no, 2);
+    EXPECT_EQ(start_packet.version_no, 3);
     EXPECT_EQ(start_packet.packet_type, 200);
     return std::make_tuple(start_packet, sender_address);
   }
@@ -79,7 +78,7 @@ public:
   void respondStartPacket(const int sequence_no)
   {
     auto [start_packet, sender_address] = receiveStartPacket();
-    ASSERT_EQ(start_packet.version_no, 2);
+    ASSERT_EQ(start_packet.version_no, 3);
     ASSERT_EQ(start_packet.packet_type, 200);
     sendStatusPacket(sender_address, sequence_no);
   }
@@ -105,7 +104,7 @@ public:
     assert(res.value() == sizeof(stop_packet));
     stop_packet.version_no = stream_motion::swapBytesIfNeeded(stop_packet.version_no);
     stop_packet.packet_type = stream_motion::swapBytesIfNeeded(stop_packet.packet_type);
-    ASSERT_EQ(stop_packet.version_no, 2);
+    ASSERT_EQ(stop_packet.version_no, 3);
     ASSERT_EQ(stop_packet.packet_type, 2);
   }
 
@@ -189,8 +188,6 @@ TEST(StreamMotionConnectionTest, TestSuccessfulConnectionCycle)
   ASSERT_TRUE(connection.getStatusPacket(status));
 
   EXPECT_EQ((status.status & 0x4) >> 2, 1);
-  EXPECT_EQ(status.packet_type, 0);
-  EXPECT_EQ(status.version_no, 3);
   EXPECT_EQ(status.joint_angle, kDefaultVector);
   EXPECT_EQ(status.position, kDefaultVector);
   EXPECT_EQ(status.current, kDefaultVector);
@@ -286,7 +283,7 @@ TEST(ByteOrder, Conversions)
 TEST(Packets, CommandPacketSize)
 {
   EXPECT_EQ(sizeof(stream_motion::CommandPacket), 344);
-  EXPECT_EQ(sizeof(stream_motion::RobotStatusPacket), 388);
+  EXPECT_EQ(sizeof(stream_motion::RobotStatusPacket), 416);
   EXPECT_EQ(sizeof(stream_motion::StartPacket), 8);
   EXPECT_EQ(sizeof(stream_motion::StopPacket), 8);
   EXPECT_EQ(sizeof(stream_motion::ThresholdPacket), 16);

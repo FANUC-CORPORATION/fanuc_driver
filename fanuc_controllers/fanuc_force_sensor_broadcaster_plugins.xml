@@ -1,0 +1,17 @@
+<!--
+SPDX-FileCopyrightText: 2026, FANUC America Corporation
+SPDX-FileCopyrightText: 2026, FANUC CORPORATION
+SPDX-License-Identifier: Apache-2.0
+-->
+
+<library path="fanuc_force_sensor_broadcaster">
+  <class
+      name="fanuc_controllers/FanucForceSensorBroadcaster"
+      type="fanuc_controllers::FanucForceSensorBroadcaster"
+      base_class_type="controller_interface::ControllerInterface"
+  >
+    <description>
+      A force sensor broadcaster for FANUC robots that publishes realtime force sensor data.
+    </description>
+  </class>
+</library>

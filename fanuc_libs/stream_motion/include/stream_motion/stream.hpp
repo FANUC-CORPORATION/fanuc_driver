@@ -58,10 +58,16 @@ public:
                               RobotThresholdPacket& robot_threshold_jerk) const = 0;
 
   /**
-   * @brief Configures the format of the command and status IO. **/
+   * @brief Configures the format of the command and status IO.
+   */
   virtual bool configureGPIO(const GPIOConfiguration& config) const = 0;
 
-  virtual bool getControllerCapability(ControllerCapabilityResultPacket& controller_capability) const = 0;
+  virtual bool getControllerCapability(ControllerCapabilityResultPacket& controller_capability) = 0;
+
+  /**
+   * @brief Configures force sensor.
+   */
+  virtual void configureForceSensor(uint32_t do_reset, uint32_t force_sensor_type) const = 0;
 };
 
 class StreamMotionConnection final : public StreamMotionInterface
@@ -91,11 +97,15 @@ public:
 
   bool configureGPIO(const GPIOConfiguration& config) const override;
 
-  bool getControllerCapability(ControllerCapabilityResultPacket& controller_capability) const override;
+  bool getControllerCapability(ControllerCapabilityResultPacket& controller_capability) override;
+
+  void configureForceSensor(uint32_t do_reset, uint32_t force_sensor_type) const override;
 
 private:
   uint32_t status_sequence_no_ = 0;
   uint32_t command_sequence_no_ = 0;
+
+  uint32_t version_no_ = kVersion;  // stream motion available version from ControllerCapabilityResultPacket
 
   struct PSocketImpl;
   std::unique_ptr<PSocketImpl> socket_impl_;

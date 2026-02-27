@@ -334,7 +334,7 @@ hardware_interface::CallbackReturn FanucHardwareInterface::on_init(const hardwar
 hardware_interface::CallbackReturn
 FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
 {
-  RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "FANUC ROS2 HW interface v3");
+  RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Preparing FANUC ROS2 HW interface");
   ip_address_ = info_.hardware_parameters["robot_ip"];
   try
   {
@@ -343,6 +343,7 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
     payload_schedule_ = StringToInt("payload_schedule", info_.hardware_parameters["payload_schedule"]);
     out_cmd_interp_buff_target_ =
         StringToInt("out_cmd_interp_buff_target", info_.hardware_parameters["out_cmd_interp_buff_target"]);
+    force_sensor_type_ = StringToInt("force_sensor_type", info_.hardware_parameters["force_sensor_type"]);
   }
   catch (const std::exception& e)
   {
@@ -361,10 +362,13 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
       fanuc_client_.reset();
       fanuc_client_ = std::make_unique<fanuc_client::FanucClient>(ip_address_, stream_motion_port_, rmi_port_);
       fanuc_client_->setOutCmdInterpBuffTarget(out_cmd_interp_buff_target_);
+      fanuc_client_->setForceSensorType(force_sensor_type_);
       fanuc_client_->startRMI();
       fanuc_client_->setPayloadSchedule(payload_schedule_);
       fanuc_client_->validateGPIOBuffer(gpio_buffer_);
-      RCLCPP_INFO(rclcpp::get_logger(kFRHWInterface), "Successfully connected to the robot.");
+      RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Successfully connected to the robot.");
+      RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface),
+                         "FANUC ROS2 HW interface is ready with client version: " << fanuc_client_->getClientVersion());
       return CallbackReturn::SUCCESS;
     }
     catch (std::runtime_error& e)
@@ -380,7 +384,7 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
 
 hardware_interface::CallbackReturn FanucHardwareInterface::on_activate(const rclcpp_lifecycle::State& previous_state)
 {
-  RCLCPP_INFO(rclcpp::get_logger(kFRHWInterface), "activating hardware interface");
+  RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "activating hardware interface");
 
   fanuc_client_->startRealtimeStream(gpio_buffer_);
   joint_targets_degrees_ = fanuc_client_->readJointAngles();
@@ -426,6 +430,22 @@ std::vector<hardware_interface::StateInterface> FanucHardwareInterface::export_s
                                 &robot_status_.collaborative_speed_scaling);
 
   state_interfaces.emplace_back(kConnectionStatusName, kIsConnectedType, &robot_status_.is_connected);
+
+  state_interfaces.emplace_back(kForceInterfaceName, kForceXType, &force_sensor_.force_x);
+  state_interfaces.emplace_back(kForceInterfaceName, kForceYType, &force_sensor_.force_y);
+  state_interfaces.emplace_back(kForceInterfaceName, kForceZType, &force_sensor_.force_z);
+  state_interfaces.emplace_back(kForceInterfaceName, kMomentXType, &force_sensor_.moment_x);
+  state_interfaces.emplace_back(kForceInterfaceName, kMomentYType, &force_sensor_.moment_y);
+  state_interfaces.emplace_back(kForceInterfaceName, kMomentZType, &force_sensor_.moment_z);
+  state_interfaces.emplace_back(kForceInterfaceName, kForceSensorType, &force_sensor_.fs_type);
+
+  // For force_torque_sensor_broadcaster (geometry_msgs/WrenchStamped)
+  state_interfaces.emplace_back("ft_sensor", "force.x", &force_sensor_.force_x);
+  state_interfaces.emplace_back("ft_sensor", "force.y", &force_sensor_.force_y);
+  state_interfaces.emplace_back("ft_sensor", "force.z", &force_sensor_.force_z);
+  state_interfaces.emplace_back("ft_sensor", "torque.x", &force_sensor_.moment_x);
+  state_interfaces.emplace_back("ft_sensor", "torque.y", &force_sensor_.moment_y);
+  state_interfaces.emplace_back("ft_sensor", "torque.z", &force_sensor_.moment_z);
 
   return state_interfaces;
 }
@@ -506,6 +526,14 @@ hardware_interface::return_type FanucHardwareInterface::read(const rclcpp::Time&
     robot_status_.motion_possible = fanuc_client_->robot_status().motion_possible;
     robot_status_.contact_stop_mode = static_cast<double>(fanuc_client_->robot_status().contact_stop_mode);
     robot_status_.collaborative_speed_scaling = static_cast<double>(fanuc_client_->robot_status().safety_scale);
+
+    force_sensor_.force_x = static_cast<double>(fanuc_client_->force_sensor().force_x);
+    force_sensor_.force_y = static_cast<double>(fanuc_client_->force_sensor().force_y);
+    force_sensor_.force_z = static_cast<double>(fanuc_client_->force_sensor().force_z);
+    force_sensor_.moment_x = static_cast<double>(fanuc_client_->force_sensor().moment_x);
+    force_sensor_.moment_y = static_cast<double>(fanuc_client_->force_sensor().moment_y);
+    force_sensor_.moment_z = static_cast<double>(fanuc_client_->force_sensor().moment_z);
+    force_sensor_.fs_type = static_cast<double>(fanuc_client_->force_sensor().fs_type);
   }
   catch (const std::exception& e)
   {

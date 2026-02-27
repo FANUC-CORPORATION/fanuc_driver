@@ -9,6 +9,10 @@ controller_manager:
       type: fanuc_controllers/FanucGPIOController
     forward_position_controller:
       type: forward_command_controller/ForwardCommandController
+    fanuc_force_sensor_broadcaster:
+      type: fanuc_controllers/FanucForceSensorBroadcaster
+    force_torque_sensor_broadcaster:
+      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
 
 fanuc_gpio_controller:
   ros__parameters:
@@ -64,3 +68,8 @@ forward_position_controller:
       - J5
       - J6
     interface_name: "position"
+
+force_torque_sensor_broadcaster:
+  ros__parameters:
+    sensor_name: "ft_sensor"
+    frame_id: "fanuc_flange"

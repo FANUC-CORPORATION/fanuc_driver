@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026, FANUC America Corporation
+# SPDX-FileCopyrightText: 2026, FANUC CORPORATION
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# do_reset 0: do nothing 1: reset force
+# fs_type  1: EMBEDDED   2: EXTERNAL
+
+uint32 do_reset
+uint32 fs_type
+---
+int32 result

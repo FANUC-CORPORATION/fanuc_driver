@@ -28,6 +28,14 @@ def launch_setup(context, *args, **kwargs):
     ros2_control_config = LaunchConfiguration("ros2_control_config")
     launch_rviz = LaunchConfiguration("launch_rviz")
 
+    robot_model_str = robot_model.perform(context)
+    robot_series_str = robot_series.perform(context)
+
+    if robot_series_str == "crx":
+        urdf_xacro_file = robot_model_str + ".urdf.xacro"
+    else:
+        urdf_xacro_file = "6dof_robot.urdf.xacro"
+
     robot_description = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
@@ -35,7 +43,7 @@ def launch_setup(context, *args, **kwargs):
             PathJoinSubstitution(
                 [FindPackageShare("fanuc_hardware_interface"), "robot", ""]
             ),
-            "6dof_robot.urdf.xacro",
+            urdf_xacro_file,
             " ",
             "robot_ip:=1.1.1.1",
             " ",
@@ -116,6 +124,20 @@ def launch_setup(context, *args, **kwargs):
         ExecuteProcess(
             cmd=[
                 "ros2 run controller_manager spawner --controller-manager-timeout 180 fanuc_gpio_controller"
+            ],
+            shell=True,
+            output="screen",
+        ),
+        ExecuteProcess(
+            cmd=[
+                "ros2 run controller_manager spawner --controller-manager-timeout 180 fanuc_force_sensor_broadcaster"
+            ],
+            shell=True,
+            output="screen",
+        ),
+        ExecuteProcess(
+            cmd=[
+                "ros2 run controller_manager spawner --controller-manager-timeout 180 force_torque_sensor_broadcaster"
             ],
             shell=True,
             output="screen",

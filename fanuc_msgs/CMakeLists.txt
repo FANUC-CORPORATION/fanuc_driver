@@ -29,6 +29,8 @@ set(msg_files
   msg/RobotStatus.msg
   msg/RobotStatusExt.msg
   msg/CollaborativeSpeedScaling.msg
+
+  msg/ForceSensor.msg
 )
 set(srv_files
   srv/SetAnalogIO.srv
@@ -50,6 +52,8 @@ set(srv_files
   srv/SetPayloadID.srv
   srv/SetPayloadValue.srv
   srv/SetPayloadComp.srv
+
+  srv/CfgForceSensor.srv
 )
 
 

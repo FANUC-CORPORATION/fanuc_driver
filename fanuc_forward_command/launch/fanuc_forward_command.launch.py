@@ -47,7 +47,7 @@ def launch_setup(context, *args, **kwargs):
             PathJoinSubstitution(
                 [FindPackageShare("fanuc_hardware_interface"), "robot", ""]
             ),
-            "6dof_robot.urdf.xacro",
+            robot_model.perform(context) + ".urdf.xacro",
             " ",
             "robot_series:=crx",
             " ",
@@ -124,6 +124,22 @@ def launch_setup(context, *args, **kwargs):
             cmd=[
                 "ros2 run controller_manager spawner "
                 "--controller-manager-timeout 180 forward_position_controller"
+            ],
+            shell=True,
+            output="screen",
+        ),
+        ExecuteProcess(
+            cmd=[
+                "ros2 run controller_manager spawner "
+                "--controller-manager-timeout 180 fanuc_force_sensor_broadcaster"
+            ],
+            shell=True,
+            output="screen",
+        ),
+        ExecuteProcess(
+            cmd=[
+                "ros2 run controller_manager spawner "
+                "--controller-manager-timeout 180 force_torque_sensor_broadcaster"
             ],
             shell=True,
             output="screen",

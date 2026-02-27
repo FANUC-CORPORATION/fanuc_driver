@@ -76,10 +76,14 @@ public:
     return true;
   }
 
-  bool getControllerCapability(stream_motion::ControllerCapabilityResultPacket& controller_capability) const override
+  bool getControllerCapability(stream_motion::ControllerCapabilityResultPacket& controller_capability) override
   {
     controller_capability.sampling_rate = 8;
     return true;
+  }
+
+  void configureForceSensor(uint32_t do_reset, uint32_t force_sensor_type) const override
+  {
   }
 
 private:

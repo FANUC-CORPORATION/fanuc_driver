@@ -93,13 +93,14 @@ FanucClient::FanucClient(std::string robot_ip, const uint16_t stream_motion_port
                          RMISingleton::creatNewRMIInstance(robot_ip_, rmi_port_) :
                          RMISingleton::setRMIInstance(std::move(rmi_connection_interface)) }
   , out_cmd_interp_buff_target_{ 8 }
+  , force_sensor_type_{ 0 }
   , p_queue_impl_(std::make_unique<PQueueImpl>())
 {
   rmi_connection_->connect(5);
-  stream_motion_->sendStopPacket();
   stream_motion::ControllerCapabilityResultPacket controller_capability;
   stream_motion_->getControllerCapability(controller_capability);
   control_period_ = controller_capability.sampling_rate;
+  client_version_ = controller_capability.available_version;
   fetchRobotLimits();
 
   setupSignalHandler();
@@ -199,6 +200,14 @@ void FanucClient::readStateFromQueue()
   robot_status_.motion_possible = robot_status.status & 0x1;
   robot_status_.contact_stop_mode = ToContactStopMode(robot_status.contact_stop_status);
   robot_status_.safety_scale = robot_status.safety_scale;
+
+  force_sensor_.force_x = robot_status.force_x;
+  force_sensor_.force_y = robot_status.force_y;
+  force_sensor_.force_z = robot_status.force_z;
+  force_sensor_.moment_x = robot_status.moment_x;
+  force_sensor_.moment_y = robot_status.moment_y;
+  force_sensor_.moment_z = robot_status.moment_z;
+  force_sensor_.fs_type = robot_status.fs_type;
 }
 
 void FanucClient::writeJointTarget(const Eigen::VectorXd& joint_targets)
@@ -456,6 +465,8 @@ void FanucClient::startRealtimeStream(std::shared_ptr<GPIOBuffer> gpio_buffer)
 {
   AssertNotStreaming(is_streaming_);
 
+  stream_motion_->sendStopPacket();
+
   gpio_buffer_ = std::move(gpio_buffer);
   if (gpio_buffer_ != nullptr)
   {
@@ -468,6 +479,7 @@ void FanucClient::startRealtimeStream(std::shared_ptr<GPIOBuffer> gpio_buffer)
   // Wait for the stream connection to be ready
   stream_motion::RobotStatusPacket status;
   stream_motion_->sendStartPacket();
+  stream_motion_->configureForceSensor(0, force_sensor_type_);
   const auto pre_loop_time = std::chrono::steady_clock::now();
   bool got_status = false;
   while (true)
@@ -609,6 +621,11 @@ void FanucClient::restoreSignalHandler()
     // Restore previous signal handler using sigaction (consistent with setup)
     sigaction(SIGINT, &previous_sigaction_, nullptr);
   }
+}
+
+void FanucClient::configureForceSensor(uint32_t do_reset, uint32_t force_sensor_type) const
+{
+  stream_motion_->configureForceSensor(do_reset, force_sensor_type);
 }
 
 }  // namespace fanuc_client

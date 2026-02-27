@@ -184,6 +184,25 @@
         <state_interface name="tp_enabled"/>
       </gpio>
 
+      <sensor name="Force">
+        <state_interface name="force_x"/>
+        <state_interface name="force_y"/>
+        <state_interface name="force_z"/>
+        <state_interface name="moment_x"/>
+        <state_interface name="moment_y"/>
+        <state_interface name="moment_z"/>
+        <state_interface name="fs_type"/>
+      </sensor>
+
+      <sensor name="ft_sensor">
+        <state_interface name="force.x"/>
+        <state_interface name="force.y"/>
+        <state_interface name="force.z"/>
+        <state_interface name="torque.x"/>
+        <state_interface name="torque.y"/>
+        <state_interface name="torque.z"/>
+      </sensor>
+
       <hardware>
         <plugin>mock_components/GenericSystem</plugin>
         <param name="state_following_offset">0.0</param>

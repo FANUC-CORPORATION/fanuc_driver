@@ -7,6 +7,10 @@ controller_manager:
       type: fanuc_controllers/ScaledJointTrajectoryController
     fanuc_gpio_controller:
       type: fanuc_controllers/FanucGPIOController
+    fanuc_force_sensor_broadcaster:
+      type: fanuc_controllers/FanucForceSensorBroadcaster
+    force_torque_sensor_broadcaster:
+      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
 
 fanuc_gpio_controller:
   ros__parameters:
@@ -51,3 +55,8 @@ joint_trajectory_controller:
       J6:
         goal: 0.05
         trajectory: 0.25
+
+force_torque_sensor_broadcaster:
+  ros__parameters:
+    sensor_name: "ft_sensor"
+    frame_id: "fanuc_flange"

@@ -72,6 +72,19 @@ private:
     double is_connected{};
   };
 
+  struct ForceSensorValues
+  {
+    // float
+    double force_x{};
+    double force_y{};
+    double force_z{};
+    double moment_x{};
+    double moment_y{};
+    double moment_z{};
+    // uint32_t
+    double fs_type{};
+  };
+
   std::unique_ptr<fanuc_client::FanucClient> fanuc_client_;
   Eigen::VectorXd fr_joint_pos_;
   Eigen::VectorXd fr_prev_joint_pos_;
@@ -79,11 +92,13 @@ private:
   Eigen::VectorXd joint_targets_;
   Eigen::VectorXd joint_targets_degrees_;
   RobotStatusValues robot_status_;
+  ForceSensorValues force_sensor_;
   std::string ip_address_;
   int32_t payload_schedule_;
   uint16_t stream_motion_port_;
   uint16_t rmi_port_;
   uint32_t out_cmd_interp_buff_target_;
+  uint32_t force_sensor_type_;
 
   std::shared_ptr<fanuc_client::GPIOBuffer> gpio_buffer_;
 

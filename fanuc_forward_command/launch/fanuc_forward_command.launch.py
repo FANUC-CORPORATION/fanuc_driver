@@ -40,14 +40,14 @@ def launch_setup(context, *args, **kwargs):
     nodes_to_launch = []
 
     # Generate robot description (same as working fanuc_moveit.launch.py)
+    urdf_xacro_file = robot_model.perform(context) + ".urdf.xacro"
     robot_description = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
             PathJoinSubstitution(
-                [FindPackageShare("fanuc_hardware_interface"), "robot", ""]
+                [FindPackageShare("fanuc_hardware_interface"), "robot", urdf_xacro_file]
             ),
-            robot_model.perform(context) + ".urdf.xacro",
             " ",
             "robot_series:=crx",
             " ",

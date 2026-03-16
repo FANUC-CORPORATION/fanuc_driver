@@ -43,9 +43,8 @@ def launch_setup(context, *args, **kwargs):
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
             PathJoinSubstitution(
-                [FindPackageShare("fanuc_hardware_interface"), "robot", ""]
+                [FindPackageShare("fanuc_hardware_interface"), "robot", urdf_xacro_file]
             ),
-            urdf_xacro_file,
             " ",
             "robot_series:=",
             robot_series,

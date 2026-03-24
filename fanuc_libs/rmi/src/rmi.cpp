@@ -143,7 +143,8 @@ struct RMIConnection::PConnectionImpl
     std::scoped_lock lock(mutex_);
     if (!conn.connect(server_address))
     {
-      throw std::runtime_error("Failed to create TCP connection at: " + robot_ip_address);
+      const int err = errno;  // Capture errno before any other operations
+      throw std::runtime_error("Failed to create TCP connection to " + robot_ip_address + ":" + std::to_string(robot_port) + ". Reason: " + std::strerror(err));
     }
     conn.set_non_blocking(true);
   }

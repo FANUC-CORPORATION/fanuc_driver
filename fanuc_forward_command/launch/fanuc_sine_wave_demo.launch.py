@@ -46,7 +46,7 @@ def generate_launch_description():
         "robot_model",
         default_value="crx10ia",
         description="The robot model",
-        choices=["crx5ia", "crx10ia", "crx10ia_l", "crx20ia_l", "crx30ia"],
+        choices=["crx3ia", "crx5ia", "crx10ia", "crx10ia_l", "crx20ia_l", "crx30ia"],
     )
 
     # Include the forward command launch file

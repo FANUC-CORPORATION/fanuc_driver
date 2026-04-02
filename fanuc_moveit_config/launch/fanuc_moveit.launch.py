@@ -138,7 +138,14 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "robot_model",
             description="The robot model (required).",
-            choices=["crx5ia", "crx10ia", "crx10ia_l", "crx20ia_l", "crx30ia"],
+            choices=[
+                "crx3ia",
+                "crx5ia",
+                "crx10ia",
+                "crx10ia_l",
+                "crx20ia_l",
+                "crx30ia",
+            ],
         ),
         DeclareLaunchArgument(
             "robot_ip",

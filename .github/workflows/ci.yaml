@@ -1,4 +1,4 @@
-name: CI
+name: ROS 2 Jazzy CI
 
 on:
   # Run workflow on-demand
@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false # should not cancel the others immediately
       matrix:
-        ROS_DISTRO: [humble]
+        ROS_DISTRO: [jazzy]
         ROS_REPO: [main]
     env:
       CCACHE_DIR: "${{ github.workspace }}/.ccache" # directory for ccache (and how we enable ccache in industrial_ci)

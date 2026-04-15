@@ -1,4 +1,4 @@
-name: CI
+name: ROS 2 Humble CI
 
 on:
   # Run workflow on-demand
@@ -11,7 +11,7 @@ on:
       - ready_for_review
   push:
     branches:
-      - 'main'
+      - 'humble'
     # any other branches we care about
 
 # Ensures that only one workflow per branch will run at a time

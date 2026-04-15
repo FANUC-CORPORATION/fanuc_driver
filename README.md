@@ -1,5 +1,5 @@
-<!-- SPDX-FileCopyrightText: 2025 FANUC America Corp.
-     SPDX-FileCopyrightText: 2025 FANUC CORPORATION
+<!-- SPDX-FileCopyrightText: 2025-2026 FANUC America Corp.
+     SPDX-FileCopyrightText: 2025-2026 FANUC CORPORATION
 
      SPDX-License-Identifier: Apache-2.0
 -->
@@ -13,14 +13,18 @@
 This repository hosts the source code of the FANUC ROS 2 Driver project, a ros2_control high-bandwidth streaming driver.
 This project will allow users to develop a ROS 2 application to control a FANUC virtual or real robot.
 
+**Note**
+The `humble` branch targets **ROS 2 Humble Hawksbill**.
+Users of **ROS 2 Jazzy Jalisco** should refer to the [main](https://github.com/FANUC-CORPORATION/fanuc_driver/tree/main) branch.
+
 ## Installation
 
-See the [FANUC ROS 2 Driver Documentation](https://fanuc-corporation.github.io/fanuc_driver_doc/) for instructions.
+See the [FANUC ROS 2 Driver Documentation](https://fanuc-corporation.github.io/fanuc_driver_doc/humble/) for instructions.
 
 ## Licensing
 
 The original FANUC ROS 2 Driver source code and associated documentation
-including these web pages are Copyright (C) 2025 FANUC America Corporation
+including these web pages are Copyright (C) 2025-2026 FANUC America Corporation
 and FANUC CORPORATION.
 
 Any modifications or additions to source code or documentation

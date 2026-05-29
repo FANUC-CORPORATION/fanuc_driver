@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026, FANUC America Corporation
+SPDX-FileCopyrightText: 2026, FANUC CORPORATION
+SPDX-License-Identifier: Apache-2.0
+-->
+
+<robot name="dual_arm">
+  <group name="rarm">
+    <chain base_link="rarm_base_link" tip_link="rarm_flange"/>
+  </group>
+  <group name="larm">
+    <chain base_link="larm_base_link" tip_link="larm_flange"/>
+  </group>
+
+  <group name="dual_arm">
+    <group name="rarm"/>
+    <group name="larm"/>
+  </group>
+
+  <!-- Add end-effector group -->
+  <group name="rarm_tool0">
+    <link name="rarm_flange"/>
+  </group>
+  <group name="larm_tool0">
+    <link name="larm_flange"/>
+  </group>
+
+  <group_state name="default" group="rarm">
+    <joint name="rarm_J1" value="0"/>
+    <joint name="rarm_J2" value="0"/>
+    <joint name="rarm_J3" value="0"/>
+    <joint name="rarm_J4" value="0"/>
+    <joint name="rarm_J5" value="-1.5708"/>
+    <joint name="rarm_J6" value="0"/>
+  </group_state>
+  <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
+  <end_effector name="rarm_tool0" parent_link="rarm_flange" group="rarm"/>
+  <!--VIRTUAL JOINT: Purpose: this element defines a virtual joint between a robot link and an external frame of reference (considered fixed with respect to the robot)-->
+  <virtual_joint name="rarm_world-base_link" type="fixed" parent_frame="world" child_link="rarm_base_link"/>
+  <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
+  <disable_collisions link1="rarm_J1_link" link2="rarm_J2_link" reason="Adjacent"/>
+  <disable_collisions link1="rarm_J1_link" link2="rarm_J3_link" reason="Never"/>
+  <disable_collisions link1="rarm_J1_link" link2="rarm_base_link" reason="Adjacent"/>
+  <disable_collisions link1="rarm_J2_link" link2="rarm_J3_link" reason="Adjacent"/>
+  <disable_collisions link1="rarm_J2_link" link2="rarm_J4_link" reason="Never"/>
+  <disable_collisions link1="rarm_J3_link" link2="rarm_J4_link" reason="Adjacent"/>
+  <disable_collisions link1="rarm_J3_link" link2="rarm_J5_link" reason="Never"/>
+  <disable_collisions link1="rarm_J3_link" link2="rarm_J6_link" reason="Never"/>
+  <disable_collisions link1="rarm_J3_link" link2="rarm_base_link" reason="Never"/>
+  <disable_collisions link1="rarm_J4_link" link2="rarm_J5_link" reason="Adjacent"/>
+  <disable_collisions link1="rarm_J4_link" link2="rarm_J6_link" reason="Never"/>
+  <disable_collisions link1="rarm_J5_link" link2="rarm_J6_link" reason="Adjacent"/>
+  <disable_collisions link1="rarm_J5_link" link2="rarm_end_effector" reason="Adjacent"/>
+  <disable_collisions link1="rarm_J6_link" link2="rarm_end_effector" reason="Adjacent"/>
+  <disable_collisions link1="rarm_flange" link2="rarm_end_effector" reason="Adjacent"/>
+
+    <!--GROUP STATES: Purpose: Define a named state for a particular group, in terms of joint values. This is useful to define states like 'folded arms'-->
+  <group_state name="default" group="larm">
+    <joint name="larm_J1" value="0"/>
+    <joint name="larm_J2" value="0"/>
+    <joint name="larm_J3" value="0"/>
+    <joint name="larm_J4" value="0"/>
+    <joint name="larm_J5" value="-1.5708"/>
+    <joint name="larm_J6" value="0"/>
+  </group_state>
+  <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
+  <end_effector name="larm_tool0" parent_link="larm_flange" group="larm"/>
+  <!--VIRTUAL JOINT: Purpose: this element defines a virtual joint between a robot link and an external frame of reference (considered fixed with respect to the robot)-->
+  <virtual_joint name="larm_world-base_link" type="fixed" parent_frame="world" child_link="larm_base_link"/>
+
+  <group_state name="default" group="dual_arm">
+    <joint name="rarm_J1" value="0"/>
+    <joint name="rarm_J2" value="0"/>
+    <joint name="rarm_J3" value="0"/>
+    <joint name="rarm_J4" value="0"/>
+    <joint name="rarm_J5" value="-1.5708"/>
+    <joint name="rarm_J6" value="0"/>
+    <joint name="larm_J1" value="0"/>
+    <joint name="larm_J2" value="0"/>
+    <joint name="larm_J3" value="0"/>
+    <joint name="larm_J4" value="0"/>
+    <joint name="larm_J5" value="-1.5708"/>
+    <joint name="larm_J6" value="0"/>
+  </group_state>
+
+  <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
+  <disable_collisions link1="larm_J1_link" link2="larm_J2_link" reason="Adjacent"/>
+  <disable_collisions link1="larm_J1_link" link2="larm_J3_link" reason="Never"/>
+  <disable_collisions link1="larm_J1_link" link2="larm_base_link" reason="Adjacent"/>
+  <disable_collisions link1="larm_J2_link" link2="larm_J3_link" reason="Adjacent"/>
+  <disable_collisions link1="larm_J2_link" link2="larm_J4_link" reason="Never"/>
+  <disable_collisions link1="larm_J3_link" link2="larm_J4_link" reason="Adjacent"/>
+  <disable_collisions link1="larm_J3_link" link2="larm_J5_link" reason="Never"/>
+  <disable_collisions link1="larm_J3_link" link2="larm_J6_link" reason="Never"/>
+  <disable_collisions link1="larm_J3_link" link2="larm_base_link" reason="Never"/>
+  <disable_collisions link1="larm_J4_link" link2="larm_J5_link" reason="Adjacent"/>
+  <disable_collisions link1="larm_J4_link" link2="larm_J6_link" reason="Never"/>
+  <disable_collisions link1="larm_J5_link" link2="larm_J6_link" reason="Adjacent"/>
+  <disable_collisions link1="larm_J5_link" link2="larm_end_effector" reason="Adjacent"/>
+  <disable_collisions link1="larm_J6_link" link2="larm_end_effector" reason="Adjacent"/>
+  <disable_collisions link1="larm_flange" link2="larm_end_effector" reason="Adjacent"/>
+</robot>

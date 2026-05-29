@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -117,12 +117,12 @@ int main()
       current_command[j] = initial_command[j] + 20.0 * (1 + -cos(time * omega));
     }
     // Send the command to the robot
-    connection.sendCommand(current_command, false, io_command);
+    connection.sendCommand(current_command, false, io_command, 1);
   }
 
   if (connection.getStatusPacket(status))
   {
-    connection.sendCommand(initial_command, true, io_command);
+    connection.sendCommand(initial_command, true, io_command, 1);
   }
 
   // checking motion completed

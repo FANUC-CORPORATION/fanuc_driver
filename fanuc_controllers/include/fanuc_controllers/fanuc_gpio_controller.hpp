@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -29,6 +29,7 @@
 #include "fanuc_msgs/srv/set_payload_id.hpp"
 #include "fanuc_msgs/srv/set_payload_value.hpp"
 #include "fanuc_msgs/srv/set_pos_reg.hpp"
+#include "fanuc_msgs/srv/switch_control_state.hpp"
 
 #include "fanuc_msgs/msg/analog_io_cmd.hpp"
 #include "fanuc_msgs/msg/analog_io_state.hpp"
@@ -91,6 +92,7 @@ private:
   ServicePtr<fanuc_msgs::srv::SetPayloadID> set_payload_id_service_;
   ServicePtr<fanuc_msgs::srv::SetPayloadValue> set_payload_value_service_;
   ServicePtr<fanuc_msgs::srv::SetPayloadComp> set_payload_comp_service_;
+  ServicePtr<fanuc_msgs::srv::SwitchControlState> switch_control_state_service_;
 
   template <typename T>
   using SubscriberPtr = std::shared_ptr<rclcpp::Subscription<T>>;

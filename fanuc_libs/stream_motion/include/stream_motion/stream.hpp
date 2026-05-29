@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -34,9 +34,10 @@ public:
    * @param io_command IO data to write. For IO types, each bit is mapped to an IO port on the robot controller. For
    * numerical types, the values are encoded in little endian format.
    * @param is_last_command Indicates if this is the last command in the sequence.
+   * @param do_motn_ctrl indicates if this packet controls the robot motion.
    */
   virtual void sendCommand(const std::array<double, kMaxAxisNumber>& command_pos, bool is_last_command,
-                           const std::array<uint8_t, 256>& io_command) const = 0;
+                           const std::array<uint8_t, 256>& io_command, const uint8_t do_motn_ctrl) const = 0;
 
   /**
    * @brief Receives a robot status packet from the robot. This method blocks until a status packet is received or a
@@ -87,7 +88,7 @@ public:
   void sendStopPacket() const override;
 
   void sendCommand(const std::array<double, kMaxAxisNumber>& command_pos, bool is_last_command,
-                   const std::array<uint8_t, 256>& io_command) const override;
+                   const std::array<uint8_t, 256>& io_command, const uint8_t do_motn_ctrl) const override;
 
   bool getStatusPacket(RobotStatusPacket& status) override;
 

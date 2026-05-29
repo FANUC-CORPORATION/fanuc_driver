@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -114,6 +114,7 @@ public:
     ASSERT_EQ(command_packet.sequence_no, 1);
     ASSERT_EQ(command_packet.is_last_command, 0);
     ASSERT_EQ(command_packet.command_pos, kDefaultCommandVectorD);
+    ASSERT_EQ(command_packet.do_motn_ctrl, 1);
     sendStatusPacket(sender_address, sequence_no);
   }
 
@@ -193,7 +194,7 @@ TEST(StreamMotionConnectionTest, TestSuccessfulConnectionCycle)
   EXPECT_EQ(status.current, kDefaultVector);
   EXPECT_EQ(status.sequence_no, 1);
 
-  connection.sendCommand(kDefaultCommandVectorD, false, {});
+  connection.sendCommand(kDefaultCommandVectorD, false, {}, 1);
   std::thread respond_status_packet([&robot] { robot.respondCommandPacket(2); });
   connection.getStatusPacket(status);
   EXPECT_EQ(status.sequence_no, 2);

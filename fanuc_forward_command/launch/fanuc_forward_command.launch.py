@@ -24,7 +24,7 @@ from launch.substitutions import (
 )
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch_ros.parameter_descriptions import ParameterValue
+from launch_ros.parameter_descriptions import ParameterValue, ParameterFile
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 
@@ -33,10 +33,11 @@ def launch_setup(context, *args, **kwargs):
     robot_model = LaunchConfiguration("robot_model")
     robot_ip = LaunchConfiguration("robot_ip")
     ros2_control_config = LaunchConfiguration("ros2_control_config")
-    gpio_configuration = LaunchConfiguration("gpio_configuration")
+    gpio_config_package = LaunchConfiguration("gpio_config_package")
+    gpio_config_path = LaunchConfiguration("gpio_config_path")
     use_mock = LaunchConfiguration("use_mock")
     launch_rviz = LaunchConfiguration("launch_rviz")
-
+    prefix = LaunchConfiguration("prefix")
     nodes_to_launch = []
 
     # Generate robot description (same as working fanuc_moveit.launch.py)
@@ -57,8 +58,13 @@ def launch_setup(context, *args, **kwargs):
             "robot_model:=",
             robot_model,
             " ",
+            "prefix:=",
+            prefix,
+            " ",
             "gpio_configuration:=",
-            gpio_configuration,
+            PathJoinSubstitution(
+                [FindPackageShare(gpio_config_package), gpio_config_path]
+            ),
             " ",
             "use_mock:=",
             use_mock,
@@ -68,12 +74,16 @@ def launch_setup(context, *args, **kwargs):
     robot_description = {
         "robot_description": ParameterValue(value=robot_description, value_type=str)
     }
+    ros_parameters = [
+        robot_description,
+        ParameterFile(ros2_control_config, allow_substs=True),
+    ]
 
     # ROS2 Control Node
     control_node = Node(
         package="controller_manager",
         executable="ros2_control_node",
-        parameters=[robot_description, ros2_control_config],
+        parameters=ros_parameters,
         output="both",
     )
     nodes_to_launch.append(control_node)
@@ -180,15 +190,14 @@ def generate_launch_description():
             description="ROS 2 control configuration file the controllers.",
         ),
         DeclareLaunchArgument(
-            "gpio_configuration",
-            default_value=PathJoinSubstitution(
-                [
-                    FindPackageShare("fanuc_hardware_interface"),
-                    "config",
-                    "example_gpio_config.yaml",
-                ]
-            ),
-            description="YAML file configuration to specify the GPIO configuration..",
+            "gpio_config_package",
+            default_value="fanuc_hardware_interface",
+            description="The package name where gpio_configuration file exists",
+        ),
+        DeclareLaunchArgument(
+            "gpio_config_path",
+            default_value="config/example_gpio_config.yaml",
+            description="The gpio_configuration file path in gpio_config_package",
         ),
         DeclareLaunchArgument(
             "use_mock",
@@ -199,6 +208,11 @@ def generate_launch_description():
             "launch_rviz",
             default_value="true",
             description="Whether to launch RViz for visualization.",
+        ),
+        DeclareLaunchArgument(
+            "prefix",
+            default_value="",
+            description="Name prefix of the robot",
         ),
     ]
 

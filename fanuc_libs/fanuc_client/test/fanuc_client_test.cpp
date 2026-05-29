@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -34,7 +34,7 @@ public:
   }
 
   void sendCommand(const std::array<double, stream_motion::kMaxAxisNumber>& command_pos, bool is_last_command,
-                   const std::array<uint8_t, 256>& io_command) const override
+                   const std::array<uint8_t, 256>& io_command, const uint8_t do_motn_ctrl) const override
   {
     for (int i = 0; i < stream_motion::kMaxAxisNumber; ++i)
     {

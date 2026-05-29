@@ -6,6 +6,10 @@
 <!-- markdownlint-disable MD013 -->
 # fanuc_driver
 
+[![ROS 2 Jazzy](https://img.shields.io/badge/ROS%202-JAZZY_JALISCO-blue)](https://docs.ros.org/en/jazzy/index.html)
+[![Ubuntu Noble](https://img.shields.io/badge/UBUNTU-24.04-orange)](https://documentation.ubuntu.com/release-notes/24.04/)
+[![Main Branch](https://img.shields.io/badge/BRANCH-main-green)](https://github.com/FANUC-CORPORATION/fanuc_driver/tree/main)
+
 ![FANUC ROS 2 Control Driver](/images/FANUC_ros2_ControlDriver.jpg "FANUC ROS 2 Control Driver")
 
 ## About

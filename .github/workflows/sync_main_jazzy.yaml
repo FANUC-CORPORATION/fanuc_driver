@@ -1,0 +1,21 @@
+name: Synchronize main and jazzy
+
+on:
+  push:
+    branches:
+      - 'main'
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Sync
+        run: |
+          git push origin main:jazzy --force

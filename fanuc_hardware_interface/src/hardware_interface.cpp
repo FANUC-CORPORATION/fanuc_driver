@@ -336,6 +336,7 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
 {
   RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Preparing FANUC ROS2 HW interface");
   ip_address_ = info_.hardware_parameters["robot_ip"];
+  bool initial_motion_control = true;
   try
   {
     rmi_port_ = StringToInt("rmi_port", info_.hardware_parameters["rmi_port"]);
@@ -344,6 +345,7 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
     out_cmd_interp_buff_target_ =
         StringToInt("out_cmd_interp_buff_target", info_.hardware_parameters["out_cmd_interp_buff_target"]);
     force_sensor_type_ = StringToInt("force_sensor_type", info_.hardware_parameters["force_sensor_type"]);
+    initial_motion_control = (StringToInt("motion_control", info_.hardware_parameters["motion_control"]) == 1);
   }
   catch (const std::exception& e)
   {
@@ -352,6 +354,7 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
 
   RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "payload_schedule: " << payload_schedule_);
   RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Starting RMI with: " << ip_address_);
+  RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Initial Motion Control Mode: " << initial_motion_control);
 
   // Initialize the driver client
   for (int i = 0; i < kNumberConnectionAttempts; i++)
@@ -361,9 +364,13 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
     {
       fanuc_client_.reset();
       fanuc_client_ = std::make_unique<fanuc_client::FanucClient>(ip_address_, stream_motion_port_, rmi_port_);
+      fanuc_client_->setDoMotnCtrl(initial_motion_control);
       fanuc_client_->setOutCmdInterpBuffTarget(out_cmd_interp_buff_target_);
       fanuc_client_->setForceSensorType(force_sensor_type_);
-      fanuc_client_->startRMI();
+      if (initial_motion_control)
+      {
+        fanuc_client_->startRMI();
+      }
       fanuc_client_->setPayloadSchedule(payload_schedule_);
       fanuc_client_->validateGPIOBuffer(gpio_buffer_);
       RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Successfully connected to the robot.");

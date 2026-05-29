@@ -13,6 +13,12 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+if("$ENV{ROS_DISTRO}" STREQUAL "humble")
+    message(FATAL_ERROR "This branch is targeting Jazzy Jalisco. Please use the `humble` branch for Humble Hawksbill. ")
+elseif(NOT "$ENV{ROS_DISTRO}" STREQUAL "jazzy")
+    message(FATAL_ERROR "Unknown distribution: $ENV{ROS_DISTRO}")
+endif()
+
 find_package(ament_cmake REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)

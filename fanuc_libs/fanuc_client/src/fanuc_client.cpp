@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -97,6 +97,7 @@ FanucClient::FanucClient(std::string robot_ip, const uint16_t stream_motion_port
   , p_queue_impl_(std::make_unique<PQueueImpl>())
 {
   rmi_connection_->connect(5);
+  stream_motion_->sendStopPacket();
   stream_motion::ControllerCapabilityResultPacket controller_capability;
   stream_motion_->getControllerCapability(controller_capability);
   control_period_ = controller_capability.sampling_rate;
@@ -201,6 +202,8 @@ void FanucClient::readStateFromQueue()
   robot_status_.contact_stop_mode = ToContactStopMode(robot_status.contact_stop_status);
   robot_status_.safety_scale = robot_status.safety_scale;
 
+  in_motion_ = robot_status.status & 0x8;
+
   force_sensor_.force_x = robot_status.force_x;
   force_sensor_.force_y = robot_status.force_y;
   force_sensor_.force_z = robot_status.force_z;
@@ -214,7 +217,14 @@ void FanucClient::writeJointTarget(const Eigen::VectorXd& joint_targets)
 {
   AssertIsStreaming(is_streaming_);
   readStateFromQueue();
-  last_joint_angles_cmd_ = joint_targets;
+  if (robot_status_.motion_possible && do_motn_ctrl_)
+  {
+    last_joint_angles_cmd_ = joint_targets;
+  }
+  else
+  {
+    last_joint_angles_cmd_ = last_joint_angles_;
+  }
 
   if (joint_targets.size() != last_joint_angles_.size())
   {
@@ -296,6 +306,7 @@ void FanucClient::streamMotionThread(const Eigen::VectorXd& joint_angles)
   double ts_drift = 0.0;
   double dev_time = 0.0;
   double dev_time_prev = 0.0;
+  bool motion_possible = false;
 
   while (is_streaming_)
   {
@@ -303,6 +314,17 @@ void FanucClient::streamMotionThread(const Eigen::VectorXd& joint_angles)
     {
       // Abort stream if we cannot get the status packet
       is_streaming_ = false;
+    }
+    else
+    {
+      if (status.status & 0x1)
+      {
+        motion_possible = true;
+      }
+      else
+      {
+        motion_possible = false;
+      }
     }
 
     // set estimated time to first command's timestamp
@@ -366,7 +388,7 @@ void FanucClient::streamMotionThread(const Eigen::VectorXd& joint_angles)
     // Handle IO commands.
     while (p_queue_impl_->command_io_queue_.try_dequeue(command_io)) {}
 
-    stream_motion_->sendCommand(command_pos, !is_streaming_, command_io);
+    stream_motion_->sendCommand(command_pos, !is_streaming_, command_io, ((motion_possible && do_motn_ctrl_) ? 1 : 0));
     p_queue_impl_->robot_state_queue_.enqueue(status);
   }
 }
@@ -439,13 +461,38 @@ bool FanucClient::getLimits(const double v_peak, const double payload, std::vect
 
 void FanucClient::startRMI()
 {
-  if (rmi_running_)
-  {
-    return;
-  }
   try
   {
-    rmi_connection_->getStatus(std::nullopt);
+    const auto rmi_status = rmi_connection_->getStatus(std::nullopt);
+    switch (rmi_status.ProgramStatus)
+    {
+      case 0:  // In Running
+        if (rmi_running_)
+        {  // RMI_MOVE.TP is already running.
+          return;
+        }
+        // The status can be 0 before first FRC_INITIALIZE.
+        // Continue to initialization.
+        break;
+      case 1:  // In Canceled
+      case 2:  // In Hold
+        // Abort and continue to initialization.
+        rmi_connection_->abort(std::nullopt);
+        break;
+      default:
+        throw std::runtime_error("RMI's ProgramStatus value is strange: " + std::to_string(rmi_status.ProgramStatus));
+        return;
+        break;
+    }
+  }
+  catch (const std::runtime_error& e)
+  {
+    throw std::runtime_error("Failed to get RMI status");
+    return;
+  }
+
+  try
+  {
     rmi_connection_->reset(std::nullopt);
     rmi_connection_->initializeRemoteMotion(std::nullopt);
   }
@@ -458,6 +505,84 @@ void FanucClient::startRMI()
     rmi_connection_->initializeRemoteMotion(std::nullopt);
   }
   rmi_running_ = true;
+}
+
+bool FanucClient::startMotionControl()
+{
+  try
+  {
+    startRMI();
+    readStateFromQueue();
+    if (!robot_status_.motion_possible)  // IBGN start is not running yet.
+    {
+      // Wait for robot to stop motion
+      auto motion_pre_loop_time = std::chrono::steady_clock::now();
+      while (true)
+      {
+        readStateFromQueue();
+        if (!in_motion_)
+        {
+          break;
+        }
+
+        if (std::chrono::steady_clock::now() - motion_pre_loop_time > std::chrono::milliseconds(1000))
+        {
+          break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+      rmi_connection_->programCallNonBlocking("STREAM_MOTN");
+
+      motion_pre_loop_time = std::chrono::steady_clock::now();
+      while (true)
+      {
+        if (std::chrono::steady_clock::now() - motion_pre_loop_time > std::chrono::seconds(1))
+        {
+          throw std::runtime_error("Stream Motion is not ready in 1 second.");
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        readStateFromQueue();
+        if (robot_status_.motion_possible)
+        {
+          do_motn_ctrl_ = true;
+          break;
+        }
+      }
+    }
+  }
+  catch (const std::runtime_error& e)
+  {
+    std::cerr << "Failed to start motion control: " << e.what() << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+void FanucClient::stopMotionControl()
+{
+  AssertIsStreaming(is_streaming_);
+
+  do_motn_ctrl_ = false;
+
+  // Wait for robot to stop motion
+  const auto motion_pre_loop_time = std::chrono::steady_clock::now();
+  while (true)
+  {
+    readStateFromQueue();
+    if (!in_motion_)
+    {
+      break;
+    }
+
+    if (std::chrono::steady_clock::now() - motion_pre_loop_time > std::chrono::milliseconds(1000))
+    {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  rmi_connection_->abort(std::nullopt);
 }
 
 // Throws if it fails to start real-time communication
@@ -473,8 +598,11 @@ void FanucClient::startRealtimeStream(std::shared_ptr<GPIOBuffer> gpio_buffer)
     stream_motion_->configureGPIO(gpio_buffer_->toStreamMotionConfig());
   }
 
-  startRMI();
-  rmi_connection_->programCallNonBlocking("STREAM_MOTN");
+  if (do_motn_ctrl_)
+  {
+    startRMI();
+    rmi_connection_->programCallNonBlocking("STREAM_MOTN");
+  }
 
   // Wait for the stream connection to be ready
   stream_motion::RobotStatusPacket status;
@@ -487,9 +615,10 @@ void FanucClient::startRealtimeStream(std::shared_ptr<GPIOBuffer> gpio_buffer)
     if (stream_motion_->getStatusPacket(status))
     {
       got_status = true;
-      if (status.status & 0x1)
+      if ((status.status & 0x1) || !do_motn_ctrl_)
       {
         /* STREAM_MOTN.TP is ready */
+        /* or motion control is not requested */
         break;
       }
     }
@@ -514,7 +643,7 @@ void FanucClient::startRealtimeStream(std::shared_ptr<GPIOBuffer> gpio_buffer)
     last_joint_angles_[i] = static_cast<double>(status.joint_angle[i]);
     command_pos[i] = static_cast<double>(status.joint_angle[i]);
   }
-  stream_motion_->sendCommand(command_pos, false, {});
+  stream_motion_->sendCommand(command_pos, false, {}, (do_motn_ctrl_ ? 1 : 0));
 
   if (rt_thread_.joinable())
   {

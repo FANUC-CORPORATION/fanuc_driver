@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -83,6 +83,20 @@ public:
   bool isStreaming();
 
   void startRMI();
+
+  bool startMotionControl();
+
+  void stopMotionControl();
+
+  bool getDoMotnCtrl() const
+  {
+    return do_motn_ctrl_;
+  }
+
+  void setDoMotnCtrl(const bool do_motn_ctrl)
+  {
+    do_motn_ctrl_ = do_motn_ctrl;
+  }
 
   bool getLimits(double v_peak, double payload, std::vector<double>& vel_limit, std::vector<double>& acc_limit,
                  std::vector<double>& jerk_limit) const;
@@ -187,6 +201,7 @@ private:
   Eigen::VectorXd last_joint_angles_cmd_ = Eigen::VectorXd::Zero(9);
   RobotStatus robot_status_;
   ForceSensor force_sensor_;
+  bool in_motion_ = false;
   uint32_t control_period_ = 0;
   uint32_t client_version_ = 0;  // stream motion client version
 
@@ -195,6 +210,8 @@ private:
 
   // Real time thread data
   std::thread rt_thread_;
+
+  bool do_motn_ctrl_ = true;
 
   // Manages RMI connection
   std::shared_ptr<rmi::RMIConnectionInterface> rmi_connection_;

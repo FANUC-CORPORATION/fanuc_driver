@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -19,6 +19,11 @@ constexpr auto kFRGPIOController = "FR_GPIO_Controller";
 
 namespace
 {
+fanuc_client::FanucClient* getClientInstance()
+{
+  return fanuc_client::FanucClient::get_instance();
+}
+
 template <typename T>
 void WriteMessageCallback(const T& msg, realtime_tools::RealtimeBuffer<T>& rt_buffer)
 {
@@ -398,6 +403,31 @@ void SetPayloadComp(const std::shared_ptr<fanuc_msgs::srv::SetPayloadComp::Reque
   {
     RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
     response->result = 1;
+  }
+}
+
+void SwitchControlState(const std::shared_ptr<fanuc_msgs::srv::SwitchControlState::Request>& request,
+                        const std::shared_ptr<fanuc_msgs::srv::SwitchControlState::Response>& response)
+{
+  switch (request->status)
+  {
+    case fanuc_msgs::srv::SwitchControlState::Request::START:
+    {
+      // Get motion control
+      const bool result = getClientInstance()->startMotionControl();
+      response->result = (result ? 0 : -1);
+      break;
+    }
+    case fanuc_msgs::srv::SwitchControlState::Request::STOP:
+      // Release motion control
+      getClientInstance()->stopMotionControl();
+      response->result = 0;
+      break;
+    default:
+      RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), "Wrong status value in SwitchControlState: %d\n",
+                   request->status);
+      response->result = -1;
+      break;
   }
 }
 
@@ -868,6 +898,8 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
       get_node()->create_service<fanuc_msgs::srv::SetPayloadValue>("~/set_payload_value", &SetPayloadValue);
   set_payload_comp_service_ =
       get_node()->create_service<fanuc_msgs::srv::SetPayloadComp>("~/set_payload_comp", &SetPayloadComp);
+  switch_control_state_service_ =
+      get_node()->create_service<fanuc_msgs::srv::SwitchControlState>("~/switch_control_state", &SwitchControlState);
 
   reentrant_group_ = get_node()->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 
@@ -1040,6 +1072,7 @@ FanucGPIOController::on_deactivate(const rclcpp_lifecycle::State& previous_state
   set_payload_id_service_.reset();
   set_payload_value_service_.reset();
   set_payload_comp_service_.reset();
+  switch_control_state_service_.reset();
 
   return ControllerInterface::on_deactivate(previous_state);
 }

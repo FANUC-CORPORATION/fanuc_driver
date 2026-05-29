@@ -9,6 +9,12 @@
   <xacro:arg name="out_cmd_interp_buff_target" default="8"/>
   <xacro:arg name="force_sensor_type" default="1"/>
   <xacro:arg name="use_mock" default="false"/>
+  <xacro:arg name="motion_control" default="1"/>
+  <xacro:arg name="origin_xyz" default="0 0 0"/>
+  <xacro:arg name="origin_rpy" default="0 0 0"/>
+  <xacro:arg name="parent_link" default="world"/>
+  <xacro:arg name="child_link" default="end_effector"/>
+  <xacro:arg name="prefix" default="" />
 
   <xacro:include filename="$(find fanuc_crx_description)/urdf/crx10ia_urdf_macro.xacro"/>
   <xacro:if value="$(arg use_mock)">
@@ -18,11 +24,11 @@
     <xacro:include filename="$(find fanuc_hardware_interface)/config/crx_physical_ros2_control_macro.xacro"/>
   </xacro:unless>
 
-  <link name="world"/>
-  <link name="end_effector"/>
-  <xacro:crx10ia parent="world" child="end_effector">
-    <origin xyz="0 0 0" rpy="0 0 0"/>
+  <link name="$(arg parent_link)"/>
+  <link name="$(arg child_link)"/>
+  <xacro:crx10ia parent="$(arg parent_link)" child="$(arg child_link)" prefix="$(arg prefix)">
+    <origin xyz="$(arg origin_xyz)" rpy="$(arg origin_rpy)"/>
   </xacro:crx10ia>
 
-  <xacro:crx_control name="crx10ia"/>
+  <xacro:crx_control name="crx10ia"  prefix="$(arg prefix)"/>
 </robot>

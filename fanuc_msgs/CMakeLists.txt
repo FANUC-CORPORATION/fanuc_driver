@@ -1,5 +1,5 @@
-# SPDX-FileCopyrightText: 2025, FANUC America Corporation
-# SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+# SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+# SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -54,6 +54,8 @@ set(srv_files
   srv/SetPayloadComp.srv
 
   srv/CfgForceSensor.srv
+
+  srv/SwitchControlState.srv
 )
 
 

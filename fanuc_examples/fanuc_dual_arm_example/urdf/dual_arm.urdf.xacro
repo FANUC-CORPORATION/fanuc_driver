@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<robot name="dual_arm" xmlns:xacro="http://wiki.ros.org/xacro">
+  <xacro:include
+    filename="$(find fanuc_crx_description)/urdf/crx10ia_l_urdf_macro.xacro"
+  />
+  <xacro:include
+    filename="$(find fanuc_lrmate_description)/urdf/lrmate200id7l_urdf_macro.xacro"
+  />
+
+  <link name="world" />
+
+  <!-- rarm -->
+  <link name="rarm_end_effector" />
+  <xacro:crx10ia_l prefix="rarm_" parent="world" child="rarm_end_effector">
+    <origin xyz="0 -1.0 0" rpy="0 0 0" />
+  </xacro:crx10ia_l>
+
+  <!-- for larm -->
+  <link name="larm_end_effector" />
+  <xacro:lrmate200id7l prefix="larm_" parent="world" child="larm_end_effector">
+    <origin xyz="0 1.0 0" rpy="0 0 0" />
+  </xacro:lrmate200id7l>
+</robot>

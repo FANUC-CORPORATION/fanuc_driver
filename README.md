@@ -6,6 +6,10 @@
 <!-- markdownlint-disable MD013 -->
 # fanuc_driver
 
+[![ROS 2 Humble](https://img.shields.io/badge/ROS%202-HUMBLE_HAWKSBILL-blue)](https://docs.ros.org/en/humble/index.html)
+[![Ubuntu Jammy](https://img.shields.io/badge/UBUNTU-22.04-orange)](https://documentation.ubuntu.com/release-notes/22.04/)
+[![Humble Branch](https://img.shields.io/badge/BRANCH-humble-green)](https://github.com/FANUC-CORPORATION/fanuc_driver/tree/humble)
+
 ![FANUC ROS 2 Control Driver](/images/FANUC_ros2_ControlDriver.jpg "FANUC ROS 2 Control Driver")
 
 ## About

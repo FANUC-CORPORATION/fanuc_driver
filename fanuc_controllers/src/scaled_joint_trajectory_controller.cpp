@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -22,12 +22,12 @@ controller_interface::InterfaceConfiguration ScaledJointTrajectoryController::st
 {
   auto state_interface_config = JointTrajectoryController::state_interface_configuration();
   using fanuc_robot_driver::kConnectionStatusName;
-  using fanuc_robot_driver::kIsConnectedType;
   using fanuc_robot_driver::kRobotStatusInterfaceName;
   using fanuc_robot_driver::kStatusCollaborativeSpeedScalingType;
+  using fanuc_robot_driver::kStatusMotionPossibleType;
   state_interface_config.names.push_back(std::string(kRobotStatusInterfaceName) + "/" +
                                          kStatusCollaborativeSpeedScalingType);
-  state_interface_config.names.push_back(std::string(kConnectionStatusName) + "/" + kIsConnectedType);
+  state_interface_config.names.push_back(std::string(kRobotStatusInterfaceName) + "/" + kStatusMotionPossibleType);
   return state_interface_config;
 }
 
@@ -49,7 +49,20 @@ controller_interface::return_type ScaledJointTrajectoryController::update(const 
   if (!state_interfaces_.empty() && state_interfaces_.back().get_value() == 0.0)
   {
     last_is_connected_ = false;
-    // The robot state indicated that the robot is no longer connected.
+    // The robot state indicated that STMO does not have the motion control.
+    const auto active_goal = *rt_active_goal_.readFromRT();
+    if (active_goal)
+    {  // abort the trajectory
+      auto result = std::make_shared<FollowJTrajAction::Result>();
+      result->set__error_code(FollowJTrajAction::Result::INVALID_GOAL);
+      result->set__error_string("Aborted: STMO is inactive (!motion_possible)");
+      active_goal->setAborted(result);
+      rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
+      rt_has_pending_goal_ = false;
+      RCLCPP_WARN(this->get_node()->get_logger(), "Aborted: STMO is inactive (!motion_possible)");
+      traj_msg_external_point_ptr_.reset();
+      traj_msg_external_point_ptr_.initRT(set_hold_position());
+    }
     return controller_interface::return_type::OK;
   }
   if (!state_interfaces_.empty())

@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2026, FANUC America Corporation
+# SPDX-FileCopyrightText: 2026, FANUC CORPORATION
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Sample joint limits for CRX-10iA/L (rarm) and LR Mate 200iD/7L (larm)
+
+# joint_limits.yaml allows the dynamics properties specified in the URDF to be overwritten or augmented as needed
+
+# Specific joint properties can be changed with the keys [max_position, min_position, max_velocity, max_acceleration]
+# Joint limits can be turned off with [has_velocity_limits, has_acceleration_limits]
+joint_limits:
+  rarm_J1:
+    has_velocity_limits: true
+    max_velocity: 2.0943951023931953
+    has_acceleration_limits: true
+    max_acceleration: 0.4
+  rarm_J2:
+    has_velocity_limits: true
+    max_velocity: 2.0943951023931953
+    has_acceleration_limits: true
+    max_acceleration: 0.4
+  rarm_J3:
+    has_velocity_limits: true
+    max_velocity: 3.1415926535897931
+    has_acceleration_limits: true
+    max_acceleration: 0.4
+  rarm_J4:
+    has_velocity_limits: true
+    max_velocity: 3.1415926535897931
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  rarm_J5:
+    has_velocity_limits: true
+    max_velocity: 3.1415926535897931
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  rarm_J6:
+    has_velocity_limits: true
+    max_velocity: 3.1415926535897931
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  larm_J1:
+    has_acceleration_limits: true
+    max_acceleration: 0.4
+  larm_J2:
+    has_acceleration_limits: true
+    max_acceleration: 0.4
+  larm_J3:
+    has_acceleration_limits: true
+    max_acceleration: 0.4
+  larm_J4:
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  larm_J5:
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  larm_J6:
+    has_acceleration_limits: true
+    max_acceleration: 1.0

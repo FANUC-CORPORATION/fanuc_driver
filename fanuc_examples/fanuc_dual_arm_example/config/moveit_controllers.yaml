@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026, FANUC America Corporation
+# SPDX-FileCopyrightText: 2026, FANUC CORPORATION
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# MoveIt uses this configuration for controller management
+trajectory_execution:
+  allowed_execution_duration_scaling: 1.0
+  allowed_goal_duration_margin: 1000.0
+  allowed_start_tolerance: 0.01
+
+moveit_controller_manager: moveit_ros_control_interface/Ros2ControlMultiManager
+
+# Increase timeout for controller manager
+controller_manager_timeout: 10.0
+
+# Disable octomap to eliminate octomap errors
+octomap:
+  enabled: false

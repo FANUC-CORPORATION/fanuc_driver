@@ -1,5 +1,5 @@
-# SPDX-FileCopyrightText: 2025, FANUC America Corporation
-# SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+# SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+# SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -24,8 +24,10 @@ def launch_setup(context, *args, **kwargs):
     robot_model = LaunchConfiguration("robot_model")
     robot_ip = LaunchConfiguration("robot_ip")
     ros2_control_config = LaunchConfiguration("ros2_control_config")
-    gpio_configuration = LaunchConfiguration("gpio_configuration")
     use_mock = LaunchConfiguration("use_mock")
+    gpio_config_package = LaunchConfiguration("gpio_config_package")
+    gpio_config_path = LaunchConfiguration("gpio_config_path")
+    motion_control = LaunchConfiguration("motion_control")
 
     nodes_to_launch = []
 
@@ -43,11 +45,13 @@ def launch_setup(context, *args, **kwargs):
         launch_arguments={
             "robot_model": robot_model,
             "robot_series": "crx",
+            "gpio_config_package": gpio_config_package,
+            "gpio_config_path": gpio_config_path,
             "robot_ip": robot_ip,
-            "gpio_configuration": gpio_configuration,
             "ros2_control_config": ros2_control_config,
             "launch_rviz": "false",
             "use_mock": use_mock,
+            "motion_control": motion_control,
         }.items(),
         condition=UnlessCondition(use_mock),
     )
@@ -66,7 +70,8 @@ def launch_setup(context, *args, **kwargs):
         launch_arguments={
             "robot_model": robot_model,
             "robot_series": "crx",
-            "gpio_configuration": gpio_configuration,
+            "gpio_config_package": gpio_config_package,
+            "gpio_config_path": gpio_config_path,
             "ros2_control_config": ros2_control_config,
             "launch_rviz": "false",
         }.items(),
@@ -77,7 +82,9 @@ def launch_setup(context, *args, **kwargs):
     description_arguments = {
         "robot_ip": robot_ip.perform(context),
         "use_mock": use_mock.perform(context),
-        "gpio_configuration": gpio_configuration.perform(context),
+        "gpio_configuration": PathJoinSubstitution(
+            [FindPackageShare(gpio_config_package), gpio_config_path]
+        ),
     }
 
     urdf_full_path = os.path.join(
@@ -164,20 +171,24 @@ def generate_launch_description():
             description="ROS 2 control configuration file the controllers.",
         ),
         DeclareLaunchArgument(
-            "gpio_configuration",
-            default_value=PathJoinSubstitution(
-                [
-                    FindPackageShare("fanuc_hardware_interface"),
-                    "config",
-                    "example_gpio_config.yaml",
-                ]
-            ),
-            description="YAML file configuration to specify the GPIO configuration..",
+            "gpio_config_package",
+            default_value="fanuc_hardware_interface",
+            description="The package name where gpio_configuration file exists",
+        ),
+        DeclareLaunchArgument(
+            "gpio_config_path",
+            default_value="config/example_gpio_config.yaml",
+            description="The gpio_configuration file path in gpio_config_package",
         ),
         DeclareLaunchArgument(
             "use_mock",
             default_value="false",
             description="Whether to use a mock hardware interface.",
+        ),
+        DeclareLaunchArgument(
+            "motion_control",
+            default_value="1",
+            description="Initial motion control state.",
         ),
     ]
 

@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -368,14 +368,15 @@ void swapControllerCapabilityResponseBytes(ControllerCapabilityResultPacket& con
 }
 
 void StreamMotionConnection::sendCommand(const std::array<double, kMaxAxisNumber>& command_pos,
-                                         const bool is_last_command, const std::array<uint8_t, 256>& io_command) const
+                                         const bool is_last_command, const std::array<uint8_t, 256>& io_command,
+                                         const uint8_t do_motn_ctrl) const
 {
   CommandPacket command{};
   command.version_no = version_no_;
   command.command_pos = command_pos;
   command.sequence_no = command_sequence_no_;
   command.is_last_command = is_last_command;
-  command.do_motn_ctrl = 1;
+  command.do_motn_ctrl = do_motn_ctrl;
   command.unused = kCommandPacketUnused;
   command.io_command = io_command;
   swapCommandPacketBytes(command);

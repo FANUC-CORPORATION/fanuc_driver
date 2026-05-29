@@ -8,6 +8,11 @@ project(fanuc_libs VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
+find_package(ament_cmake QUIET)
+if (ament_cmake_FOUND)
+    ament_package()
+endif()
+
 # Build the sockpp library
 include(FetchContent)
 FetchContent_Declare(

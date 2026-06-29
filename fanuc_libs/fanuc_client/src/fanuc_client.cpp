@@ -494,7 +494,11 @@ void FanucClient::startRMI()
   try
   {
     rmi_connection_->reset(std::nullopt);
-    rmi_connection_->initializeRemoteMotion(std::nullopt);
+    rmi_connection_->initializeRemoteMotion(std::nullopt,  // timeout
+                                            1,             // groupmask
+                                            std::nullopt,  // rtsa
+                                            std::nullopt   // pltzmode
+    );
   }
   catch (const std::runtime_error&)
   {
@@ -502,7 +506,11 @@ void FanucClient::startRMI()
     rmi_connection_->abort(std::nullopt);
     rmi_connection_->reset(std::nullopt);
     rmi_connection_->getStatus(std::nullopt);
-    rmi_connection_->initializeRemoteMotion(std::nullopt);
+    rmi_connection_->initializeRemoteMotion(std::nullopt,  // timeout
+                                            1,             // groupmask
+                                            std::nullopt,  // rtsa
+                                            std::nullopt   // pltzmode
+    );
   }
   rmi_running_ = true;
 }

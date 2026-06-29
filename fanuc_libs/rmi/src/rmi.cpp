@@ -316,11 +316,28 @@ DisconnectPacket::Response RMIConnection::disconnect(const std::optional<double>
 
 InitializePacket::Response RMIConnection::initializeRemoteMotion(const std::optional<double> timeout)
 {
+  return initializeRemoteMotion(timeout, std::nullopt, std::nullopt, std::nullopt);
+}
+
+InitializePacket::Response RMIConnection::initializeRemoteMotion(const std::optional<double> timeout,
+                                                                 const std::optional<uint8_t> groupmask,
+                                                                 const std::optional<std::string>& rtsa,
+                                                                 const std::optional<std::string>& pltzmode)
+{
   {
     std::scoped_lock lock(mutex_);
     sequence_number_ = 1;  // Reset sequence number for a new session
   }
-  connection_impl_->write(InitializePacket::Request());
+
+  const auto packet = [&]() {
+    auto request = InitializePacket::Request();
+    request.GroupMask = groupmask;
+    request.RTSA = rtsa;
+    request.PLTZMODE = pltzmode;
+    return request;
+  }();
+  connection_impl_->write(packet);
+
   return getResponsePacket<InitializePacket::Response>(timeout, "Failed to initialize RMI. ", std::nullopt);
 }
 

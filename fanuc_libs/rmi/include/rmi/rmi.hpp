@@ -24,6 +24,10 @@ public:
   virtual DisconnectPacket::Response disconnect(std::optional<double> timeout) = 0;
 
   virtual InitializePacket::Response initializeRemoteMotion(std::optional<double> timeout) = 0;
+  virtual InitializePacket::Response initializeRemoteMotion(std::optional<double> timeout,
+                                                            const std::optional<uint8_t> groupmask,
+                                                            const std::optional<std::string>& rtsa,
+                                                            const std::optional<std::string>& pltzmode) = 0;
 
   virtual ProgramCallPacket::Response programCall(const std::string& program_name, std::optional<double> timeout) = 0;
 
@@ -120,6 +124,10 @@ public:
   DisconnectPacket::Response disconnect(std::optional<double> timeout) override;
 
   InitializePacket::Response initializeRemoteMotion(std::optional<double> timeout) override;
+  InitializePacket::Response initializeRemoteMotion(std::optional<double> timeout,
+                                                    const std::optional<uint8_t> groupmask,
+                                                    const std::optional<std::string>& rtsa,
+                                                    const std::optional<std::string>& pltzmode) override;
 
   ProgramCallPacket::Response programCall(const std::string& program_name, std::optional<double> timeout) override;
 

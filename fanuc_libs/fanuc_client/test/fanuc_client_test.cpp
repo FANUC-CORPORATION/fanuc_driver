@@ -99,6 +99,10 @@ public:
   MOCK_METHOD(rmi::ConnectROS2Packet::Response, connect, (std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::DisconnectPacket::Response, disconnect, (std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::InitializePacket::Response, initializeRemoteMotion, (std::optional<double> timeout), (override));
+  MOCK_METHOD(rmi::InitializePacket::Response, initializeRemoteMotion,
+              (std::optional<double> timeout, const std::optional<uint8_t> groupmask,
+               const std::optional<std::string>& rtsa, const std::optional<std::string>& pltzmode),
+              (override));
   MOCK_METHOD(rmi::ProgramCallPacket::Response, programCall,
               (const std::string& program_name, std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::ProgramCallPacket::Request, programCallNonBlocking, (const std::string& program_name), (override));

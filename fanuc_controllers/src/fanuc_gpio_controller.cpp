@@ -65,7 +65,8 @@ void GetBoolIO(const std::shared_ptr<fanuc_msgs::srv::GetBoolIO::Request>& reque
                const std::shared_ptr<fanuc_msgs::srv::GetBoolIO::Response>& response)
 {
   std::vector supported_types = { fanuc_msgs::msg::IOType::DI, fanuc_msgs::msg::IOType::RI, fanuc_msgs::msg::IOType::DO,
-                                  fanuc_msgs::msg::IOType::RO, fanuc_msgs::msg::IOType::F };
+                                  fanuc_msgs::msg::IOType::RO, fanuc_msgs::msg::IOType::F,  fanuc_msgs::msg::IOType::UO,
+                                  fanuc_msgs::msg::IOType::UI };
   if (std::find(supported_types.begin(), supported_types.end(), request->io_type.type) == supported_types.end())
   {
     response->result = 1;

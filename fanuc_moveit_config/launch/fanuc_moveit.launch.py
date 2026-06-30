@@ -85,6 +85,7 @@ def launch_setup(context, *args, **kwargs):
         "gpio_configuration": PathJoinSubstitution(
             [FindPackageShare(gpio_config_package), gpio_config_path]
         ),
+        "motion_control": motion_control.perform(context),
     }
 
     urdf_full_path = os.path.join(

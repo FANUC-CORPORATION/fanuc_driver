@@ -99,6 +99,7 @@ struct StreamMotionConnection::PSocketImpl
   PSocketImpl(const std::string& robot_ip_address, const uint16_t robot_port, const double timeout)
     : server_address{ robot_ip_address, robot_port }, timeout{ timeout }
   {
+    sockpp::initialize();
     sock.connect(server_address);
     sock.set_non_blocking(true);
     std::cout << "Created UDP socket at: " << sock.address() << std::endl;
@@ -146,6 +147,31 @@ struct StreamMotionConnection::PSocketImpl
     return true;
   }
 
+  void clear()
+  {
+    char dummy[1024];
+    constexpr size_t kPacketNumBytes = sizeof(dummy);
+    unsigned int sum = 0;
+    sockpp::result<unsigned int> max_size_result = sock.recv_buffer_size();
+    if (max_size_result.is_error() || (max_size_result.value() == 0))
+    {
+      return;
+    }
+    unsigned int max_size = max_size_result.value();
+    while (true)
+    {
+      sockpp::result<size_t> res = sock.recv(dummy, kPacketNumBytes);
+      if (res.is_error() || (res.value() == 0))
+      {
+        break;
+      }
+      sum += res.value();
+      if (sum >= max_size)
+      {
+        break;
+      }
+    }
+  }
   sockpp::udp_socket sock;
   sockpp::inet_address server_address;
   double timeout;
@@ -246,12 +272,15 @@ bool StreamMotionConnection::getControllerCapability(ControllerCapabilityResultP
   return true;
 }
 
-void StreamMotionConnection::sendStartPacket() const
+void StreamMotionConnection::sendStartPacket()
 {
   StartPacket start_packet{};
   start_packet.packet_type = swapBytesIfNeeded(start_packet.packet_type);
   start_packet.version_no = swapBytesIfNeeded(version_no_);
   socket_impl_->send(start_packet);
+  // Reset status numbers
+  status_sequence_no_ = 0;
+  command_sequence_no_ = 0;
 }
 
 void StreamMotionConnection::sendStopPacket() const
@@ -260,6 +289,11 @@ void StreamMotionConnection::sendStopPacket() const
   stop_packet.packet_type = swapBytesIfNeeded(stop_packet.packet_type);
   stop_packet.version_no = swapBytesIfNeeded(version_no_);
   socket_impl_->send(stop_packet);
+}
+
+void StreamMotionConnection::clearRecvBuffer()
+{
+  socket_impl_->clear();
 }
 
 void StreamMotionConnection::configureForceSensor(uint32_t do_reset, uint32_t force_sensor_type) const

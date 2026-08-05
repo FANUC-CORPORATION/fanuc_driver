@@ -1,11 +1,12 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
 #include "rmi/rmi.hpp"
 #include "rmi/serialization.hpp"
 
+#include <iconv.h>
 #include <array>
 #include <iostream>
 #include <mutex>
@@ -94,23 +95,6 @@ std::string LookupErrorCode(const uint32_t error_code)
 }
 
 template <typename T>
-std::optional<T> CheckForPacketInJSONResponses(std::list<std::string>::iterator& it,
-                                               std::list<std::string>& json_responses)
-{
-  std::optional<T> packet_response;
-  for (; it != json_responses.end(); ++it)
-  {
-    if (auto packet_response_maybe = FromJSON<T>(*it); packet_response_maybe.has_value())
-    {
-      packet_response = packet_response_maybe.value();
-      it = json_responses.erase(it);
-      break;
-    }
-  }
-  return packet_response;
-}
-
-template <typename T>
 bool CheckSequenceIDIfPresent(T& packet, int expected_sequence_id)
 {
   if constexpr (requires(typename T::Response t) { t.SequenceID; })
@@ -118,6 +102,95 @@ bool CheckSequenceIDIfPresent(T& packet, int expected_sequence_id)
     return packet.SequenceID == expected_sequence_id;
   }
   return true;
+}
+
+std::string convertEncoding(const std::string& input, const char* from, const char* to)
+{
+  iconv_t cd = iconv_open(to, from);
+  if (cd == (iconv_t)-1)
+  {
+    throw std::runtime_error("iconv_open failed");
+  }
+
+  size_t inBytes = input.size();
+  size_t outBytes = inBytes * 4;
+  std::string output(outBytes, '\0');
+
+  char* inBuf = const_cast<char*>(input.data());
+  char* outBuf = output.data();
+
+  iconv(cd, &inBuf, &inBytes, &outBuf, &outBytes);
+
+  iconv_close(cd);
+
+  output.resize(output.size() - outBytes);
+  return output;
+}
+
+void addCallArguments(ProgramCallPacket::Request& packet, const std::vector<RMICallParam>& params)
+{
+  auto const params_num = params.size();
+  int i = 0;
+  if (params_num <= 0)
+    return;
+
+  packet.ParamType1 = params[i].first;
+  packet.ParamValue1 = params[i].second;
+  i++;
+  if (params_num == i)
+    return;
+
+  packet.ParamType2 = params[i].first;
+  packet.ParamValue2 = params[i].second;
+  i++;
+  if (params_num == i)
+    return;
+
+  packet.ParamType3 = params[i].first;
+  packet.ParamValue3 = params[i].second;
+  i++;
+  if (params_num == i)
+    return;
+
+  packet.ParamType4 = params[i].first;
+  packet.ParamValue4 = params[i].second;
+  i++;
+  if (params_num == i)
+    return;
+
+  packet.ParamType5 = params[i].first;
+  packet.ParamValue5 = params[i].second;
+  i++;
+  if (params_num == i)
+    return;
+
+  packet.ParamType6 = params[i].first;
+  packet.ParamValue6 = params[i].second;
+  i++;
+  if (params_num == i)
+    return;
+
+  packet.ParamType7 = params[i].first;
+  packet.ParamValue7 = params[i].second;
+  i++;
+  if (params_num == i)
+    return;
+
+  packet.ParamType8 = params[i].first;
+  packet.ParamValue8 = params[i].second;
+  i++;
+  if (params_num == i)
+    return;
+
+  packet.ParamType9 = params[i].first;
+  packet.ParamValue9 = params[i].second;
+  i++;
+  if (params_num == i)
+    return;
+
+  packet.ParamType10 = params[i].first;
+  packet.ParamValue10 = params[i].second;
+  return;
 }
 
 }  // namespace
@@ -130,9 +203,19 @@ struct RMIConnection::PConnectionImpl
   }
 
   template <typename T>
-  void write(const T& value)
+  void write(const T& value, const std::string encoding = "UTF-8")
   {
-    const std::string json_string = ToJSON(value) + kEndChars;
+    const std::string json_string = [&]() {
+      std::string json_str = ToJSON(value) + kEndChars;
+      if constexpr (std::is_same_v<T, ProgramCallPacket::Request>)
+      {
+        if (encoding != "UTF-8")
+        {
+          json_str = convertEncoding(json_str, "UTF-8", encoding.c_str());
+        }
+      }
+      return json_str;
+    }();
     std::scoped_lock lock(mutex_);
     conn.write(json_string);
   }
@@ -184,6 +267,8 @@ RMIConnection::RMIConnection(const std::string& robot_ip_address, const uint16_t
   , rmi_port_{ rmi_port }
   , sequence_number_{ 1 }
   , connection_impl_{ std::make_unique<PConnectionImpl>(robot_ip_address, rmi_port) }
+  , last_instruction_response_{ std::nullopt }
+  , encoding_{ "UTF-8" }
 {
 }
 
@@ -202,6 +287,62 @@ void RMIConnection::drainConnectionBuffer()
   }
 }
 
+bool RMIConnection::processInstructionResponse(std::string& json_response)
+{
+  const auto json = IsInstruction(json_response);
+
+  if (!json.has_value())
+  {
+    return false;  // not instruction
+  }
+
+  const int sequence_id = json.value().SequenceID;
+
+  std::scoped_lock lock(instruction_mutex_);
+  if (!last_instruction_response_.has_value() || (last_instruction_response_.value().SequenceID < sequence_id))
+  {
+    last_instruction_response_ = std::optional<InstructionResponse>(json.value());
+  }
+  return true;
+}
+
+template <typename T>
+std::optional<T> RMIConnection::checkForPacketInJSONResponses(std::list<std::string>::iterator& it,
+                                                              std::list<std::string>& json_responses)
+{
+  std::optional<T> packet_response;
+  for (; it != json_responses.end(); ++it)
+  {
+    if (processInstructionResponse(*it))
+    {
+      it = json_responses.erase(it);
+      break;
+    }
+    if constexpr (std::is_same_v<T, ReadErrorPacket::Response>)
+    {
+      if (encoding_ == "SHIFT-JIS")
+      {
+        // When the language setting is Japanese on R-30iB Plus series controllers,
+        // the error messages are sent in SHIFT-JIS.
+        std::string converted_string = convertEncoding(*it, encoding_.c_str(), "UTF-8");
+        if (auto packet_response_maybe = FromJSON<T>(converted_string); packet_response_maybe.has_value())
+        {
+          packet_response = packet_response_maybe.value();
+          it = json_responses.erase(it);
+          break;
+        }
+      }
+    }
+    if (auto packet_response_maybe = FromJSON<T>(*it); packet_response_maybe.has_value())
+    {
+      packet_response = packet_response_maybe.value();
+      it = json_responses.erase(it);
+      break;
+    }
+  }
+  return packet_response;
+}
+
 template <typename T>
 std::optional<T> RMIConnection::checkPushPacket()
 {
@@ -209,11 +350,11 @@ std::optional<T> RMIConnection::checkPushPacket()
 
   std::optional<T> packet;
   auto it = json_responses_.begin();
-  auto possible_packet = CheckForPacketInJSONResponses<T>(it, json_responses_);
+  auto possible_packet = checkForPacketInJSONResponses<T>(it, json_responses_);
   while (packet.has_value())
   {
     packet = possible_packet;
-    possible_packet = CheckForPacketInJSONResponses<T>(it, json_responses_);
+    possible_packet = checkForPacketInJSONResponses<T>(it, json_responses_);
   }
 
   return packet;
@@ -237,6 +378,12 @@ std::optional<CommunicationPacket> RMIConnection::checkCommunicationPacket()
 std::optional<UnknownPacket> RMIConnection::checkUnknownPacket()
 {
   return checkPushPacket<UnknownPacket>();
+}
+
+std::optional<InstructionResponse> RMIConnection::getLastInstructionResponse()
+{
+  std::scoped_lock lock(instruction_mutex_);
+  return last_instruction_response_;
 }
 
 template <typename T>
@@ -281,7 +428,7 @@ T RMIConnection::getResponsePacket(const std::optional<double> timeout_optional,
     std::scoped_lock lock(mutex_);
     if (auto it = json_responses_.begin(); !json_responses_.empty())
     {
-      packet_response = CheckForPacketInJSONResponses<T>(it, json_responses_);
+      packet_response = checkForPacketInJSONResponses<T>(it, json_responses_);
     }
   }
 
@@ -328,6 +475,10 @@ InitializePacket::Response RMIConnection::initializeRemoteMotion(const std::opti
     std::scoped_lock lock(mutex_);
     sequence_number_ = 1;  // Reset sequence number for a new session
   }
+  {
+    std::scoped_lock lock(instruction_mutex_);
+    last_instruction_response_ = std::nullopt;
+  }
 
   const auto packet = [&]() {
     auto request = InitializePacket::Request();
@@ -343,18 +494,31 @@ InitializePacket::Response RMIConnection::initializeRemoteMotion(const std::opti
 
 ProgramCallPacket::Request RMIConnection::programCallNonBlocking(const std::string& program_name)
 {
+  return programCallNonBlocking(program_name, {});
+}
+
+ProgramCallPacket::Request RMIConnection::programCallNonBlocking(const std::string& program_name,
+                                                                 const std::vector<RMICallParam>& params)
+{
   ProgramCallPacket::Request program_call_packet;
   program_call_packet.ProgramName = program_name;
+  addCallArguments(program_call_packet, params);
   std::scoped_lock lock(motion_mutex_);
   program_call_packet.SequenceID = getSequenceNumber();
-  connection_impl_->write(program_call_packet);
+  connection_impl_->write(program_call_packet, encoding_);
   return program_call_packet;
 }
 
 ProgramCallPacket::Response RMIConnection::programCall(const std::string& program_name,
                                                        const std::optional<double> timeout)
 {
-  ProgramCallPacket::Request program_call_packet = programCallNonBlocking(program_name);
+  return programCall(program_name, timeout, {});
+}
+
+ProgramCallPacket::Response RMIConnection::programCall(const std::string& program_name, std::optional<double> timeout,
+                                                       const std::vector<RMICallParam>& params)
+{
+  ProgramCallPacket::Request program_call_packet = programCallNonBlocking(program_name, params);
   return getResponsePacket<ProgramCallPacket::Response>(
       timeout, "Failed to call program named `" + program_name + "`. ", program_call_packet.SequenceID);
 }
@@ -401,8 +565,84 @@ ResetRobotPacket::Response RMIConnection::reset(const std::optional<double> time
 
 ReadErrorPacket::Response RMIConnection::readError(const std::optional<double> timeout)
 {
-  connection_impl_->write(ReadErrorPacket::Request());
+  return readError(timeout, std::nullopt);
+}
+
+ReadErrorPacket::Response RMIConnection::readError(const std::optional<double> timeout,
+                                                   const std::optional<uint8_t> count)
+{
+  const auto packet = [&]() {
+    auto request = ReadErrorPacket::Request();
+    request.Count = count;
+    return request;
+  }();
+  connection_impl_->write(packet);
   return getResponsePacket<ReadErrorPacket::Response>(timeout, "Failed to read error. ", std::nullopt);
+}
+
+GetUFrameToolFramePacket::Response RMIConnection::getUFrameUTool(std::optional<double> timeout,
+                                                                 const std::optional<uint8_t> group)
+{
+  auto request = GetUFrameToolFramePacket::Request();
+  request.Group = group;
+
+  return sendRMIPacket<GetUFrameToolFramePacket>(request, timeout);
+}
+
+SetUFrameToolFramePacket::Response RMIConnection::setUFrameUTool(const int uframe, const int utool,
+                                                                 std::optional<double> timeout,
+                                                                 const std::optional<uint8_t> group)
+{
+  auto request = SetUFrameToolFramePacket::Request();
+  request.UFrameNumber = uframe;
+  request.UToolNumber = utool;
+  request.Group = group;
+
+  return sendRMIPacket<SetUFrameToolFramePacket>(request, timeout);
+}
+
+ReadUFrameDataPacket::Response RMIConnection::readUFrameData(const int uframe, std::optional<double> timeout,
+                                                             const std::optional<uint8_t> group)
+{
+  auto request = ReadUFrameDataPacket::Request();
+  request.FrameNumber = uframe;
+  request.Group = group;
+
+  return sendRMIPacket<ReadUFrameDataPacket>(request, timeout);
+}
+
+WriteUFrameDataPacket::Response RMIConnection::writeUFrameData(const int uframe, const FrameData data,
+                                                               std::optional<double> timeout,
+                                                               const std::optional<uint8_t> group)
+{
+  auto request = WriteUFrameDataPacket::Request();
+  request.FrameNumber = uframe;
+  request.Frame = data;
+  request.Group = group;
+
+  return sendRMIPacket<WriteUFrameDataPacket>(request, timeout);
+}
+
+ReadUToolDataPacket::Response RMIConnection::readUToolData(const int utool, std::optional<double> timeout,
+                                                           const std::optional<uint8_t> group)
+{
+  auto request = ReadUToolDataPacket::Request();
+  request.ToolNumber = utool;
+  request.Group = group;
+
+  return sendRMIPacket<ReadUToolDataPacket>(request, timeout);
+}
+
+WriteUToolDataPacket::Response RMIConnection::writeUToolData(const int utool, const FrameData data,
+                                                             std::optional<double> timeout,
+                                                             const std::optional<uint8_t> group)
+{
+  auto request = WriteUToolDataPacket::Request();
+  request.ToolNumber = utool;
+  request.Frame = data;
+  request.Group = group;
+
+  return sendRMIPacket<WriteUToolDataPacket>(request, timeout);
 }
 
 WritePositionRegisterPacket::Response
@@ -613,8 +853,25 @@ ReadJointAnglesPacket::Response RMIConnection::readJointAngles(const std::option
   ReadJointAnglesPacket::Request read_joint_angles_packet;
   read_joint_angles_packet.Group = group;
   connection_impl_->write(read_joint_angles_packet);
-  return getResponsePacket<ReadJointAnglesPacket::Response>(timeout, "Failed to set the payload schedule. ",
-                                                            std::nullopt);
+  return getResponsePacket<ReadJointAnglesPacket::Response>(timeout, "Failed to get joint angles. ", std::nullopt);
+}
+
+GetCartesianPositionPacket::Response RMIConnection::getCartesianPosition(std::optional<double> timeout,
+                                                                         const std::optional<uint8_t> group)
+{
+  GetCartesianPositionPacket::Request packet;
+  packet.Group = group;
+  connection_impl_->write(packet);
+  return getResponsePacket<GetCartesianPositionPacket::Response>(timeout, "Failed to get cartesian position. ",
+                                                                 std::nullopt);
+}
+
+GetTCPSpeedPacket::Response RMIConnection::getTCPSpeed(std::optional<double> timeout, const std::optional<uint8_t> group)
+{
+  GetTCPSpeedPacket::Request packet;
+  packet.Group = group;
+  connection_impl_->write(packet);
+  return getResponsePacket<GetTCPSpeedPacket::Response>(timeout, "Failed to get TCP speed. ", std::nullopt);
 }
 
 JointMotionJRepPacket::Response RMIConnection::sendJointMotion(JointMotionJRepPacket::Request joint_motion_request,
@@ -622,8 +879,121 @@ JointMotionJRepPacket::Response RMIConnection::sendJointMotion(JointMotionJRepPa
 {
   joint_motion_request.SequenceID = getSequenceNumber();
   connection_impl_->write(joint_motion_request);
-  return getResponsePacket<JointMotionJRepPacket::Response>(timeout, "Failed to set the payload schedule. ",
+  return getResponsePacket<JointMotionJRepPacket::Response>(timeout, "Failed to send joint motion. ",
                                                             joint_motion_request.SequenceID);
+}
+
+void RMIConnection::sendRMIPacketNonBlocking(JointMotionPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<JointMotionPacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(JointMotionJRepPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<JointMotionJRepPacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(JointRelativePacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<JointRelativePacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(JointRelativeJRepPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<JointRelativeJRepPacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(LinearMotionPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<LinearMotionPacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(LinearMotionJRepPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<LinearMotionJRepPacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(LinearRelativePacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<LinearRelativePacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(LinearRelativeJRepPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<LinearRelativeJRepPacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(CircularMotionPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<CircularMotionPacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(CircularRelativePacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<CircularRelativePacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(SplineMotionPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<SplineMotionPacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(SplineMotionJRepPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<SplineMotionJRepPacket>(packet);
+  return;
+};
+
+void RMIConnection::sendRMIPacketNonBlocking(WaitForDINPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<WaitForDINPacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(SetUFramePacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<SetUFramePacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(SetToolFramePacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<SetToolFramePacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(WaitForTimePacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<WaitForTimePacket>(packet);
+  return;
+};
+void RMIConnection::sendRMIPacketNonBlocking(SetPayloadInstructionPacket::Request& packet)
+{
+  sendRMIPacketNonBlockingImpl<SetPayloadInstructionPacket>(packet);
+  return;
+};
+
+std::string RMIConnection::getErrorMessageString(const uint32_t error_code)
+{
+  return LookupErrorCode(error_code);
+}
+
+// Do any operations to read response packets beforehand
+// in order to update last_instruction_response_.
+int32_t RMIConnection::getRemainingBuffuerSize()
+{
+#define RMI_MAX_BUFFER_SIZE 8
+  std::scoped_lock lock(instruction_mutex_);
+  if (last_instruction_response_.has_value())
+  {
+    return RMI_MAX_BUFFER_SIZE - (sequence_number_ - last_instruction_response_.value().SequenceID);
+  }
+  else
+  {
+    return RMI_MAX_BUFFER_SIZE - sequence_number_;
+  }
+}
+
+void RMIConnection::setEncoding(const std::string& encoding)
+{
+  encoding_ = encoding;
 }
 
 template <typename T>
@@ -640,6 +1010,21 @@ typename T::Response RMIConnection::sendRMIPacket(typename T::Request& request_p
 
   connection_impl_->write(request_packet);
   return getResponsePacket<typename T::Response>(timeout, "Failed to send packet. ", std::nullopt);
+}
+
+template <typename T>
+void RMIConnection::sendRMIPacketNonBlockingImpl(typename T::Request& request_packet)
+{
+  if constexpr (requires(typename T::Response t) { t.SequenceID; })
+  {
+    std::scoped_lock lock(motion_mutex_);
+    request_packet.SequenceID = getSequenceNumber();
+    connection_impl_->write(request_packet);
+    return;
+  }
+
+  connection_impl_->write(request_packet);
+  return;
 }
 
 template SetUFrameToolFramePacket::Response

@@ -43,6 +43,7 @@
         <param name="out_cmd_interp_buff_target">$(arg out_cmd_interp_buff_target)</param>
         <param name="force_sensor_type">$(arg force_sensor_type)</param>
 	<param name="motion_control">$(arg motion_control)</param>
+	<param name="encoding">$(arg encoding)</param>
       </hardware>
     </ros2_control>
   </xacro:macro>

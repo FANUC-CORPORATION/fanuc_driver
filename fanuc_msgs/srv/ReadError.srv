@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026, FANUC America Corporation
+# SPDX-FileCopyrightText: 2026, FANUC CORPORATION
+#
+# SPDX-License-Identifier: Apache-2.0
+
+uint8 count 1
+---
+int32 result
+uint8 count
+string[5] error_data

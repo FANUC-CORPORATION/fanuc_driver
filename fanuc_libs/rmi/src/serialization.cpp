@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -61,11 +61,13 @@ template std::string ToJSON<CircularMotionPacket::Request>(const CircularMotionP
 template std::string ToJSON<GetTCPSpeedPacket::Request>(const GetTCPSpeedPacket::Request&);
 template std::string ToJSON<WriteUFrameDataPacket::Request>(const WriteUFrameDataPacket::Request&);
 template std::string ToJSON<LinearMotionPacket::Request>(const LinearMotionPacket::Request&);
+template std::string ToJSON<GetCartesianPositionPacket::Request>(const GetCartesianPositionPacket::Request&);
 template std::string ToJSON<ReadJointAnglesPacket::Request>(const ReadJointAnglesPacket::Request&);
 template std::string ToJSON<CircularRelativePacket::Request>(const CircularRelativePacket::Request&);
 template std::string ToJSON<GetUFrameToolFramePacket::Request>(const GetUFrameToolFramePacket::Request&);
 template std::string ToJSON<JointRelativePacket::Request>(const JointRelativePacket::Request&);
 template std::string ToJSON<LinearRelativePacket::Request>(const LinearRelativePacket::Request&);
 template std::string ToJSON<ConnectROS2Packet::Request>(const ConnectROS2Packet::Request&);
+template std::string ToJSON<SetPayloadInstructionPacket::Request>(const SetPayloadInstructionPacket::Request&);
 
 }  // namespace rmi

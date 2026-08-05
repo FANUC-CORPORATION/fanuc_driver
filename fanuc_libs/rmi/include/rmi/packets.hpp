@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace rmi
 {
@@ -207,8 +208,8 @@ struct SetUFrameToolFramePacket
   struct Request
   {
     std::string Command = "FRC_SetUFrameUTool";
-    int UFrameNumber;
-    int UToolNumber;
+    uint8_t UFrameNumber;
+    uint8_t UToolNumber;
     std::optional<uint8_t> Group;
   };
 
@@ -250,6 +251,7 @@ struct ReadUFrameDataPacket
   struct Request
   {
     std::string Command = "FRC_ReadUFrameData";
+    uint8_t FrameNumber;
     std::optional<uint8_t> Group;
   };
 
@@ -298,7 +300,6 @@ struct ReadUToolDataPacket
     int ErrorID;
     uint8_t ToolNumber;
     FrameData Frame;
-    ConfigurationData Configuration;
     std::optional<uint8_t> Group;
   };
 };
@@ -498,6 +499,7 @@ struct GetTCPSpeedPacket
   struct Request
   {
     std::string Command = "FRC_ReadTCPSpeed";
+    std::optional<uint8_t> Group;
   };
 
   struct Response
@@ -506,10 +508,11 @@ struct GetTCPSpeedPacket
     int ErrorID;
     int TimeTag;
     float Speed;  // in mm/sec
+    std::optional<uint8_t> Group;
   };
 };
 
-// 2.4.2 Packet To Set User Frame Instruction
+// 2.4.1 Packet To Wait for DIN Instruction
 struct WaitForDINPacket
 {
   struct Request
@@ -528,7 +531,7 @@ struct WaitForDINPacket
   };
 };
 
-// 2.4.3 Packet To Set User Tool Instruction
+// 2.4.2 Packet To Set User Frame Instruction
 struct SetUFramePacket
 {
   struct Request
@@ -546,7 +549,7 @@ struct SetUFramePacket
   };
 };
 
-// 2.4.4 Packet To Add Wait Time Instruction
+// 2.4.3 Packet To Set User Tool Instruction
 struct SetToolFramePacket
 {
   struct Request
@@ -583,6 +586,24 @@ struct WaitForTimePacket
 };
 
 // 2.4.5 Packet To Set Payload Instruction
+struct SetPayloadInstructionPacket
+{
+  struct Request
+  {
+    std::string Instruction = "FRC_SetPayLoad";
+    int SequenceID;
+    uint8_t ScheduleNumber;
+  };
+
+  struct Response
+  {
+    std::string Instruction = "FRC_SetPayLoad";
+    int ErrorID;
+    int SequenceID;
+  };
+};
+
+// Packet To Set Payload
 struct SetPayloadPacket
 {
   struct Request
@@ -606,6 +627,26 @@ struct ProgramCallPacket
     std::string Instruction = "FRC_Call";
     int SequenceID;
     std::string ProgramName;
+    std::optional<std::string> ParamType1;
+    std::optional<std::variant<int, float, std::string>> ParamValue1;
+    std::optional<std::string> ParamType2;
+    std::optional<std::variant<int, float, std::string>> ParamValue2;
+    std::optional<std::string> ParamType3;
+    std::optional<std::variant<int, float, std::string>> ParamValue3;
+    std::optional<std::string> ParamType4;
+    std::optional<std::variant<int, float, std::string>> ParamValue4;
+    std::optional<std::string> ParamType5;
+    std::optional<std::variant<int, float, std::string>> ParamValue5;
+    std::optional<std::string> ParamType6;
+    std::optional<std::variant<int, float, std::string>> ParamValue6;
+    std::optional<std::string> ParamType7;
+    std::optional<std::variant<int, float, std::string>> ParamValue7;
+    std::optional<std::string> ParamType8;
+    std::optional<std::variant<int, float, std::string>> ParamValue8;
+    std::optional<std::string> ParamType9;
+    std::optional<std::variant<int, float, std::string>> ParamValue9;
+    std::optional<std::string> ParamType10;
+    std::optional<std::variant<int, float, std::string>> ParamValue10;
   };
 
   struct Response
@@ -910,6 +951,20 @@ struct LinearMotionJRepPacket
     uint16_t Speed;
     std::string TermType;
     uint8_t TermValue;
+    std::optional<uint8_t> ACC;
+    std::optional<uint16_t> OffsetPRNumber;
+    std::optional<uint16_t> VisionPRNumber;
+    std::optional<std::string> WristJoint;  // "ON"
+    std::optional<std::string> MROT;        // "ON"
+    std::optional<std::string> LCBType;
+    std::optional<uint16_t> LCBValue;
+    std::optional<uint8_t> PortType;
+    std::optional<uint16_t> portNumber;
+    std::optional<std::string> portValue;
+    std::optional<uint16_t> ToolOffsetPRNumber;
+    std::optional<int> ALIM;
+    std::optional<uint16_t> ALIMREG;
+    std::optional<std::string> NoBlend;  // "ON"
   };
 
   struct Response
@@ -932,6 +987,20 @@ struct LinearRelativeJRepPacket
     uint16_t Speed;
     std::string TermType;
     uint8_t TermValue;
+    std::optional<uint8_t> ACC;
+    std::optional<uint16_t> OffsetPRNumber;
+    std::optional<uint16_t> VisionPRNumber;
+    std::optional<std::string> WristJoint;  // "ON"
+    std::optional<std::string> MROT;        // "ON"
+    std::optional<std::string> LCBType;
+    std::optional<uint16_t> LCBValue;
+    std::optional<uint8_t> PortType;
+    std::optional<uint16_t> portNumber;
+    std::optional<std::string> portValue;
+    std::optional<uint16_t> ToolOffsetPRNumber;
+    std::optional<int> ALIM;
+    std::optional<uint16_t> ALIMREG;
+    std::optional<std::string> NoBlend;  // "ON"
   };
 
   struct Response

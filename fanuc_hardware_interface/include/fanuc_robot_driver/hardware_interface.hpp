@@ -1,12 +1,14 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
 
+#include <atomic>
 #include "fanuc_client/fanuc_client.hpp"
 #include "fanuc_client/gpio_buffer.hpp"
+#include "fanuc_robot_driver/constants.hpp"
 #include "gpio_config/gpio_config.hpp"
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
@@ -47,6 +49,12 @@ public:
 
   std::vector<hardware_interface::CommandInterface> export_command_interfaces() final;
 
+  hardware_interface::return_type prepare_command_mode_switch(const std::vector<std::string>& start_interfaces,
+                                                              const std::vector<std::string>& stop_interfaces) override;
+
+  hardware_interface::return_type perform_command_mode_switch(const std::vector<std::string>& start_interfaces,
+                                                              const std::vector<std::string>& stop_interfaces) override;
+
   hardware_interface::return_type read(const rclcpp::Time& time, const rclcpp::Duration& period) override;
 
   hardware_interface::return_type write(const rclcpp::Time& time, const rclcpp::Duration& period) override;
@@ -85,7 +93,15 @@ private:
     double fs_type{};
   };
 
+  enum class MotionCommandType
+  {
+    None = fanuc_robot_driver::MotionCommandTypeNone,
+    InitialState = fanuc_robot_driver::MotionCommandTypeInitialState,
+    Position = fanuc_robot_driver::MotionCommandTypePosition,
+    RMI = fanuc_robot_driver::MotionCommandTypeRMI
+  };
   std::unique_ptr<fanuc_client::FanucClient> fanuc_client_;
+  std::atomic<bool> hw_active_;
   Eigen::VectorXd fr_joint_pos_;
   Eigen::VectorXd fr_prev_joint_pos_;
   Eigen::VectorXd fr_joint_vel_;
@@ -99,11 +115,16 @@ private:
   uint16_t rmi_port_;
   uint32_t out_cmd_interp_buff_target_;
   uint32_t force_sensor_type_;
+  std::atomic<MotionCommandType> motion_command_type_;
+  double motion_command_type_dbl_;
+  std::string encoding_;
 
   std::shared_ptr<fanuc_client::GPIOBuffer> gpio_buffer_;
 
   std::vector<std::unique_ptr<IOCommandInterface>> io_commands_;
   std::vector<std::unique_ptr<IOStateInterface>> io_state_;
+
+  double dummy_rmi_command_;
 };
 
 }  // namespace fanuc_robot_driver

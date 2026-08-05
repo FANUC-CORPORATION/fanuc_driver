@@ -42,6 +42,8 @@ def launch_setup(context, *args, **kwargs):
     origin_rr = LaunchConfiguration("origin_rr")
     origin_rp = LaunchConfiguration("origin_rp")
     origin_ry = LaunchConfiguration("origin_ry")
+    initial_controller = LaunchConfiguration("initial_controller")
+    encoding = LaunchConfiguration("encoding")
 
     robot_model_str = robot_model.perform(context)
     robot_series_str = robot_series.perform(context)
@@ -97,6 +99,9 @@ def launch_setup(context, *args, **kwargs):
             " ",
             origin_ry,
             "' ",
+            "encoding:=",
+            encoding,
+            " ",
         ]
     )
     robot_description = {
@@ -153,6 +158,14 @@ def launch_setup(context, *args, **kwargs):
             " -c /" + namespace_str + "/controller_manager"
         )
 
+    jtc_activate_str = " --inactive"
+    frc_activate_str = " --inactive"
+    initial_controller_str = initial_controller.perform(context)
+    if initial_controller_str == "joint_trajectory_controller":
+        jtc_activate_str = ""
+    elif initial_controller_str == "fanuc_rmi_controller":
+        frc_activate_str = ""
+
     controller_spawner_processes = [
         ExecuteProcess(
             cmd=[
@@ -165,6 +178,7 @@ def launch_setup(context, *args, **kwargs):
         ExecuteProcess(
             cmd=[
                 "ros2 run controller_manager spawner --controller-manager-timeout 180 joint_trajectory_controller",
+                jtc_activate_str,
                 controller_manager_name_argument,
             ],
             shell=True,
@@ -189,6 +203,15 @@ def launch_setup(context, *args, **kwargs):
         ExecuteProcess(
             cmd=[
                 "ros2 run controller_manager spawner --controller-manager-timeout 180 force_torque_sensor_broadcaster",
+                controller_manager_name_argument,
+            ],
+            shell=True,
+            output="screen",
+        ),
+        ExecuteProcess(
+            cmd=[
+                "ros2 run controller_manager spawner --controller-manager-timeout 180 fanuc_rmi_controller",
+                frc_activate_str,
                 controller_manager_name_argument,
             ],
             shell=True,
@@ -306,6 +329,21 @@ def generate_launch_description():
             "origin_ry",
             default_value="0",
             description="Yaw rotation from parent_link to base_link",
+        ),
+        DeclareLaunchArgument(
+            "initial_controller",
+            description="The controller to activate initially",
+            default_value="joint_trajectory_controller",
+            choices=[
+                "joint_trajectory_controller",
+                "fanuc_rmi_controller",
+                "none",
+            ],
+        ),
+        DeclareLaunchArgument(
+            "encoding",
+            default_value="UTF-8",
+            description="The robot controller's encoding. When the controller is R-30iB plus series and the language is Japanese, set this to SHIFT-JIS.",
         ),
     ]
     return LaunchDescription(

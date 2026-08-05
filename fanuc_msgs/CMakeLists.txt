@@ -29,8 +29,11 @@ set(msg_files
   msg/RobotStatus.msg
   msg/RobotStatusExt.msg
   msg/CollaborativeSpeedScaling.msg
+  msg/RMIStatus.msg
 
-  msg/ForceSensor.msg
+  msg/Frame.msg
+
+msg/ForceSensor.msg
 )
 set(srv_files
   srv/SetAnalogIO.srv
@@ -53,9 +56,23 @@ set(srv_files
   srv/SetPayloadValue.srv
   srv/SetPayloadComp.srv
 
+  srv/ReadError.srv
+
+  srv/GetUFrameUTool.srv
+  srv/SetUFrameUTool.srv
+
+  srv/GetUFrameData.srv
+  srv/SetUFrameData.srv
+  srv/GetUToolData.srv
+  srv/SetUToolData.srv
+
+  srv/GetCartesianPosition.srv
+  srv/GetTCPSpeed.srv
+
   srv/CfgForceSensor.srv
 
   srv/SwitchControlState.srv
+  srv/Reset.srv
 )
 
 

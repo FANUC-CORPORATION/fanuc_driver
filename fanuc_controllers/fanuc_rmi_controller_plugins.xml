@@ -1,0 +1,17 @@
+<!--
+SPDX-FileCopyrightText: 2026, FANUC America Corporation
+SPDX-FileCopyrightText: 2026, FANUC CORPORATION
+SPDX-License-Identifier: Apache-2.0
+-->
+
+<library path="fanuc_rmi_controller">
+  <class
+      name="fanuc_controllers/FanucRMIController"
+      type="fanuc_controllers::FanucRMIController"
+      base_class_type="controller_interface::ControllerInterface"
+  >
+    <description>
+      A controller for FANUC robots to operate RMI instructions.
+    </description>
+  </class>
+</library>

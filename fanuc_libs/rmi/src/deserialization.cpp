@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -29,6 +29,15 @@ std::optional<T> FromJSON(const std::string& json)
   }
 
   return valid_result ? std::optional<T>(result.value()) : std::nullopt;
+}
+
+std::optional<InstructionResponse> IsInstruction(const std::string& json)
+{
+  const auto result = rfl::json::read<InstructionResponse>(json);
+  bool valid_result = false;
+  valid_result = result.has_value();
+
+  return valid_result ? std::optional<InstructionResponse>(result.value()) : std::nullopt;
 }
 
 template std::optional<WriteDigitalOutputPacket::Response>
@@ -66,6 +75,8 @@ FromJSON<GetExtendedStatusPacket::Response>(const std::string&);
 template std::optional<LinearRelativeJRepPacket::Response>
 FromJSON<LinearRelativeJRepPacket::Response>(const std::string&);
 template std::optional<LinearRelativePacket::Response> FromJSON<LinearRelativePacket::Response>(const std::string&);
+template std::optional<GetCartesianPositionPacket::Response>
+FromJSON<GetCartesianPositionPacket::Response>(const std::string&);
 template std::optional<ReadJointAnglesPacket::Response> FromJSON<ReadJointAnglesPacket::Response>(const std::string&);
 template std::optional<ReadUFrameDataPacket::Response> FromJSON<ReadUFrameDataPacket::Response>(const std::string&);
 template std::optional<JointMotionJRepPacket::Response> FromJSON<JointMotionJRepPacket::Response>(const std::string&);
@@ -92,6 +103,8 @@ template std::optional<WriteUFrameDataPacket::Response> FromJSON<WriteUFrameData
 template std::optional<SetUFrameToolFramePacket::Response>
 FromJSON<SetUFrameToolFramePacket::Response>(const std::string&);
 template std::optional<ConnectROS2Packet::Response> FromJSON<ConnectROS2Packet::Response>(const std::string&);
+template std::optional<SetPayloadInstructionPacket::Response>
+FromJSON<SetPayloadInstructionPacket::Response>(const std::string&);
 
 template std::optional<CommunicationPacket> FromJSON<CommunicationPacket>(const std::string&);
 template std::optional<SystemFaultPacket> FromJSON<SystemFaultPacket>(const std::string&);

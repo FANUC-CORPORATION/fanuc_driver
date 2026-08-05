@@ -56,7 +56,8 @@ public:
   FanucClient() = delete;
   explicit FanucClient(std::string robot_ip, uint16_t stream_motion_port = 60015, uint16_t rmi_port = 16001,
                        std::unique_ptr<stream_motion::StreamMotionInterface> stream_motion_interface = nullptr,
-                       std::unique_ptr<rmi::RMIConnectionInterface> rmi_connection_interface = nullptr);
+                       std::unique_ptr<rmi::RMIConnectionInterface> rmi_connection_interface = nullptr,
+                       std::string encoding = "");
 
   FanucClient(const FanucClient&) = delete;
   FanucClient& operator=(const FanucClient&) = delete;
@@ -83,6 +84,8 @@ public:
   bool isStreaming();
 
   void startRMI();
+
+  void abortRMI();
 
   bool startMotionControl();
 

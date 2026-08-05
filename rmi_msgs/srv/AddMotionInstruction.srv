@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026, FANUC America Corporation
+# SPDX-FileCopyrightText: 2026, FANUC CORPORATION
+#
+# SPDX-License-Identifier: Apache-2.0
+
+MotionType motion_type
+bool incremental false
+
+Representation representation
+Joint joint
+Cartesian cartesian
+
+SpeedType speed_type
+uint16 speed_value
+
+TermType term_type
+uint8 term_value
+
+# for circular motion
+Representation via_representation
+Joint via_joint
+Cartesian via_cartesian
+
+MotionInstructionOptions options
+
+---
+
+int32 result
+int32 sequence_id

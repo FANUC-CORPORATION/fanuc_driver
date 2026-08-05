@@ -17,6 +17,7 @@
   <xacro:arg name="parent_link" default="world"/>
   <xacro:arg name="child_link" default="end_effector"/>
   <xacro:arg name="prefix" default="" />
+  <xacro:arg name="encoding" default="UTF-8"/>
 
   <xacro:property name="robot_description_name" default="fanuc_$(arg robot_series)_description"/>
 

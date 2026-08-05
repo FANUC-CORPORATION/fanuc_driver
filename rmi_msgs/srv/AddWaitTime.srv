@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026, FANUC America Corporation
+# SPDX-FileCopyrightText: 2026, FANUC CORPORATION
+#
+# SPDX-License-Identifier: Apache-2.0
+
+float32 time
+
+---
+
+int32 result
+int32 sequence_id

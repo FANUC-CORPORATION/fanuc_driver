@@ -81,7 +81,7 @@ struct FanucClient::PQueueImpl
 
 FanucClient::FanucClient(std::string robot_ip, const uint16_t stream_motion_port, const uint16_t rmi_port,
                          std::unique_ptr<stream_motion::StreamMotionInterface> stream_motion_interface,
-                         std::unique_ptr<rmi::RMIConnectionInterface> rmi_connection_interface)
+                         std::unique_ptr<rmi::RMIConnectionInterface> rmi_connection_interface, std::string encoding)
   : robot_ip_{ std::move(robot_ip) }
   , stream_motion_port_{ stream_motion_port }
   , rmi_port_{ rmi_port }
@@ -96,6 +96,10 @@ FanucClient::FanucClient(std::string robot_ip, const uint16_t stream_motion_port
   , force_sensor_type_{ 0 }
   , p_queue_impl_(std::make_unique<PQueueImpl>())
 {
+  if (encoding != "")
+  {
+    rmi_connection_->setEncoding(encoding);
+  }
   rmi_connection_->connect(5);
   stream_motion_->sendStopPacket();
   stream_motion::ControllerCapabilityResultPacket controller_capability;
@@ -515,6 +519,19 @@ void FanucClient::startRMI()
   rmi_running_ = true;
 }
 
+void FanucClient::abortRMI()
+{
+  try
+  {
+    rmi_connection_->abort(std::nullopt);
+  }
+  catch (const std::runtime_error& e)
+  {
+    throw std::runtime_error("Failed to abort RMI");
+    return;
+  }
+}
+
 bool FanucClient::startMotionControl()
 {
   try
@@ -599,6 +616,7 @@ void FanucClient::startRealtimeStream(std::shared_ptr<GPIOBuffer> gpio_buffer)
   AssertNotStreaming(is_streaming_);
 
   stream_motion_->sendStopPacket();
+  stream_motion_->clearRecvBuffer();
 
   gpio_buffer_ = std::move(gpio_buffer);
   if (gpio_buffer_ != nullptr)
@@ -688,7 +706,16 @@ void FanucClient::stopRealtimeStream()
     }
   } while (status.status & 0x8);
 
-  rmi_connection_->abort(std::nullopt);
+  try
+  {
+    rmi_connection_->abort(std::nullopt);
+  }
+  catch (const std::exception& e)
+  {
+    std::cerr << "stopRealtimeStream: " << e.what() << std::endl;
+    std::cerr << "Abort can fail when RMI is not running. " << std::endl;
+  }
+
   stream_motion_->sendStopPacket();
 }
 

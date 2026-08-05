@@ -28,6 +28,8 @@ def launch_setup(context, *args, **kwargs):
     gpio_config_package = LaunchConfiguration("gpio_config_package")
     gpio_config_path = LaunchConfiguration("gpio_config_path")
     motion_control = LaunchConfiguration("motion_control")
+    initial_controller = LaunchConfiguration("initial_controller")
+    encoding = LaunchConfiguration("encoding")
 
     nodes_to_launch = []
 
@@ -52,6 +54,8 @@ def launch_setup(context, *args, **kwargs):
             "launch_rviz": "false",
             "use_mock": use_mock,
             "motion_control": motion_control,
+            "inital_contoller": initial_controller,
+            "encoding": encoding,
         }.items(),
         condition=UnlessCondition(use_mock),
     )
@@ -86,6 +90,7 @@ def launch_setup(context, *args, **kwargs):
             [FindPackageShare(gpio_config_package), gpio_config_path]
         ),
         "motion_control": motion_control.perform(context),
+        "encoding": encoding.perform(context),
     }
 
     urdf_full_path = os.path.join(
@@ -190,6 +195,21 @@ def generate_launch_description():
             "motion_control",
             default_value="1",
             description="Initial motion control state.",
+        ),
+        DeclareLaunchArgument(
+            "initial_controller",
+            description="The controller to activate initially",
+            default_value="joint_trajectory_controller",
+            choices=[
+                "joint_trajectory_controller",
+                "fanuc_rmi_controller",
+                "none",
+            ],
+        ),
+        DeclareLaunchArgument(
+            "encoding",
+            default_value="UTF-8",
+            description="The robot controller's encoding. When the controller is R-30iB plus series and the language is Japanese, set this to SHIFT-JIS.",
         ),
     ]
 

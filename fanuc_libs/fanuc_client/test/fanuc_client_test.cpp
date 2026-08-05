@@ -23,7 +23,7 @@ public:
     return stream_connected_;
   }
 
-  void sendStartPacket() const override
+  void sendStartPacket() override
   {
     stream_connected_ = true;
   }
@@ -32,6 +32,8 @@ public:
   {
     stream_connected_ = false;
   }
+
+  MOCK_METHOD(void, clearRecvBuffer, (), (override));
 
   void sendCommand(const std::array<double, stream_motion::kMaxAxisNumber>& command_pos, bool is_last_command,
                    const std::array<uint8_t, 256>& io_command, const uint8_t do_motn_ctrl) const override
@@ -105,7 +107,13 @@ public:
               (override));
   MOCK_METHOD(rmi::ProgramCallPacket::Response, programCall,
               (const std::string& program_name, std::optional<double> timeout), (override));
+  MOCK_METHOD(rmi::ProgramCallPacket::Response, programCall,
+              (const std::string& program_name, std::optional<double> timeout,
+               const std::vector<rmi::RMICallParam>& params),
+              (override));
   MOCK_METHOD(rmi::ProgramCallPacket::Request, programCallNonBlocking, (const std::string& program_name), (override));
+  MOCK_METHOD(rmi::ProgramCallPacket::Request, programCallNonBlocking,
+              (const std::string& program_name, const std::vector<rmi::RMICallParam>& params), (override));
   MOCK_METHOD(rmi::StatusRequestPacket::Response, getStatus, (std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::SetSpeedOverridePacket::Response, setSpeedOverride, (int value, std::optional<double> timeout),
               (override));
@@ -114,6 +122,25 @@ public:
   MOCK_METHOD(rmi::ContinuePacket::Response, resume, (std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::ResetRobotPacket::Response, reset, (std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::ReadErrorPacket::Response, readError, (std::optional<double> timeout), (override));
+  MOCK_METHOD(rmi::ReadErrorPacket::Response, readError,
+              (std::optional<double> timeout, const std::optional<uint8_t> count), (override));
+  MOCK_METHOD(rmi::GetUFrameToolFramePacket::Response, getUFrameUTool,
+              (std::optional<double> timeout, const std::optional<uint8_t> group), (override));
+  MOCK_METHOD(rmi::SetUFrameToolFramePacket::Response, setUFrameUTool,
+              (const int uframe, const int utool, std::optional<double> timeout, const std::optional<uint8_t> group),
+              (override));
+  MOCK_METHOD(rmi::ReadUFrameDataPacket::Response, readUFrameData,
+              (const int uframe, std::optional<double> timeout, const std::optional<uint8_t> group), (override));
+  MOCK_METHOD(rmi::WriteUFrameDataPacket::Response, writeUFrameData,
+              (const int uframe, const rmi::FrameData data, std::optional<double> timeout,
+               const std::optional<uint8_t> group),
+              (override));
+  MOCK_METHOD(rmi::ReadUToolDataPacket::Response, readUToolData,
+              (const int utool, std::optional<double> timeout, const std::optional<uint8_t> group), (override));
+  MOCK_METHOD(rmi::WriteUToolDataPacket::Response, writeUToolData,
+              (const int utool, const rmi::FrameData data, std::optional<double> timeout,
+               const std::optional<uint8_t> group),
+              (override));
   MOCK_METHOD(rmi::WritePositionRegisterPacket::Response, writePositionRegister,
               (int register_number, const std::string& representation, const rmi::ConfigurationData& configuration,
                const rmi::PositionData& position, const rmi::JointAngleData& joint_angle, std::optional<double> timeout),
@@ -161,10 +188,39 @@ public:
               (override));
   MOCK_METHOD(rmi::ReadJointAnglesPacket::Response, readJointAngles,
               (const std::optional<uint8_t>& group, const std::optional<double> timeout), (override));
+  MOCK_METHOD(rmi::GetCartesianPositionPacket::Response, getCartesianPosition,
+              (std::optional<double> timeout, const std::optional<uint8_t> group), (override));
+  MOCK_METHOD(rmi::GetTCPSpeedPacket::Response, getTCPSpeed,
+              (std::optional<double> timeout, const std::optional<uint8_t> group), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::JointMotionPacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::JointMotionJRepPacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::JointRelativePacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::JointRelativeJRepPacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::LinearMotionPacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::LinearMotionJRepPacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::LinearRelativePacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::LinearRelativeJRepPacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::CircularMotionPacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::CircularRelativePacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::SplineMotionPacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::SplineMotionJRepPacket::Request & packet), (override));
+
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::WaitForDINPacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::SetUFramePacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::SetToolFramePacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::WaitForTimePacket::Request & packet), (override));
+  MOCK_METHOD(void, sendRMIPacketNonBlocking, (rmi::SetPayloadInstructionPacket::Request & packet), (override));
+
+  MOCK_METHOD(std::string, getErrorMessageString, (const uint32_t error_code), (override));
+
+  MOCK_METHOD(int32_t, getRemainingBuffuerSize, (), (override));
+  MOCK_METHOD(void, setEncoding, (const std::string& encoding), (override));
+
   MOCK_METHOD(std::optional<rmi::SystemFaultPacket>, checkSystemFault, (), (override));
   MOCK_METHOD(std::optional<rmi::TimeoutTerminatePacket>, checkTimeoutTerminate, (), (override));
   MOCK_METHOD(std::optional<rmi::CommunicationPacket>, checkCommunicationPacket, (), (override));
   MOCK_METHOD(std::optional<rmi::UnknownPacket>, checkUnknownPacket, (), (override));
+  MOCK_METHOD(std::optional<rmi::InstructionResponse>, getLastInstructionResponse, (), (override));
 };
 
 using NiceMockStreamMotionConnection = testing::NiceMock<MockStreamMotionConnection>;
@@ -176,7 +232,7 @@ TEST(FanucClientTest, TestSuccessfulLifecycle)
   auto stream_motion_interface = std::make_unique<NiceMockStreamMotionConnection>(stream_connected);
   auto rmi_interface = std::make_unique<NiceMockRMIConnection>();
   fanuc_client::FanucClient fanuc_client("127.0.0.1", 60015, 16001, std::move(stream_motion_interface),
-                                         std::move(rmi_interface));
+                                         std::move(rmi_interface), "UTF-8");
 
   // Reading/Writing data before starting the stream should throw an error
   const Eigen::VectorXd initial_joint_targets = Eigen::VectorXd::Zero(stream_motion::kMaxAxisNumber);
@@ -220,7 +276,7 @@ TEST(FanucClientTest, TestGetLimits)
   auto stream_motion_interface = std::make_unique<MockStreamMotionConnection>(stream_connected);
   auto rmi_interface = std::make_unique<NiceMockRMIConnection>();
   fanuc_client::FanucClient fanuc_client("127.0.0.1", 60015, 16001, std::move(stream_motion_interface),
-                                         std::move(rmi_interface));
+                                         std::move(rmi_interface), "UTF-8");
   const double v_peak = 1000.0;
   const double payload = 0.0;
   std::vector<double> vel_limit;

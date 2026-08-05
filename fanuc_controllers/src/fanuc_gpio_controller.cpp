@@ -407,28 +407,377 @@ void SetPayloadComp(const std::shared_ptr<fanuc_msgs::srv::SetPayloadComp::Reque
   }
 }
 
-void SwitchControlState(const std::shared_ptr<fanuc_msgs::srv::SwitchControlState::Request>& request,
-                        const std::shared_ptr<fanuc_msgs::srv::SwitchControlState::Response>& response)
+void ReadError(const std::shared_ptr<fanuc_msgs::srv::ReadError::Request>& request,
+               const std::shared_ptr<fanuc_msgs::srv::ReadError::Response>& response)
 {
-  switch (request->status)
+  uint8_t count = request->count;
+  if ((count < 1) || (count > 5))
   {
-    case fanuc_msgs::srv::SwitchControlState::Request::START:
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController),
+                 "ReadError: The requested count is %d but it must be between 1 to 5.", count);
+    response->result = 1;
+    return;
+  }
+  try
+  {
+    const auto rmi_response = getRMIInstance()->readError(1.0, count);
+    response->result = rmi_response.ErrorID;
+    if (response->result != 0)
     {
-      // Get motion control
-      const bool result = getClientInstance()->startMotionControl();
-      response->result = (result ? 0 : -1);
-      break;
+      response->count = 0;
     }
-    case fanuc_msgs::srv::SwitchControlState::Request::STOP:
-      // Release motion control
-      getClientInstance()->stopMotionControl();
-      response->result = 0;
-      break;
-    default:
-      RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), "Wrong status value in SwitchControlState: %d\n",
-                   request->status);
-      response->result = -1;
-      break;
+    else
+    {
+      if (!rmi_response.Count.has_value())
+      {
+        response->count = 0;
+      }
+      else
+      {
+        response->count = rmi_response.Count.value();
+        response->error_data[0] = rmi_response.ErrorData;
+        if (rmi_response.ErrorData2.has_value())
+        {
+          response->error_data[1] = rmi_response.ErrorData2.value();
+        }
+        if (rmi_response.ErrorData3.has_value())
+        {
+          response->error_data[2] = rmi_response.ErrorData3.value();
+        }
+        if (rmi_response.ErrorData4.has_value())
+        {
+          response->error_data[3] = rmi_response.ErrorData4.value();
+        }
+        if (rmi_response.ErrorData5.has_value())
+        {
+          response->error_data[4] = rmi_response.ErrorData5.value();
+        }
+      }
+    }
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), "If the robot controller's language is not English, please "
+                                                        "check the encoding in the launch arguments.");
+    response->result = 1;
+  }
+}
+
+void GetUFrameUTool(const std::shared_ptr<fanuc_msgs::srv::GetUFrameUTool::Request>& request,
+                    const std::shared_ptr<fanuc_msgs::srv::GetUFrameUTool::Response>& response)
+{
+  std::optional<uint8_t> group;
+  if (request->group != 0)
+  {
+    group = request->group;
+  }
+  try
+  {
+    const auto rmi_response = getRMIInstance()->getUFrameUTool(1.0, group);
+    response->result = rmi_response.ErrorID;
+    if (response->result == 0)
+    {
+      if (rmi_response.Group.has_value())
+      {
+        response->group = rmi_response.Group.value();
+      }
+      else
+      {
+        response->group = 1;
+      }
+      response->uframe_number = rmi_response.UFrameNumber;
+      response->utool_number = rmi_response.UToolNumber;
+    }
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void SetUFrameUTool(const std::shared_ptr<fanuc_msgs::srv::SetUFrameUTool::Request>& request,
+                    const std::shared_ptr<fanuc_msgs::srv::SetUFrameUTool::Response>& response)
+{
+  std::optional<uint8_t> group;
+  if (request->group != 0)
+  {
+    group = request->group;
+  }
+  try
+  {
+    const auto rmi_response =
+        getRMIInstance()->setUFrameUTool(request->uframe_number, request->utool_number, 1.0, group);
+    response->result = rmi_response.ErrorID;
+    if (response->result == 0)
+    {
+      if (rmi_response.Group.has_value())
+      {
+        response->group = rmi_response.Group.value();
+      }
+      else
+      {
+        response->group = 1;
+      }
+    }
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+rmi::FrameData ConvertToFramePacket(const fanuc_msgs::msg::Frame& data)
+{
+  rmi::FrameData result;
+  result.X = data.x;
+  result.Y = data.y;
+  result.Z = data.z;
+  result.W = data.w;
+  result.P = data.p;
+  result.R = data.r;
+  return result;
+}
+
+fanuc_msgs::msg::Frame ConvertToFrameMsg(const rmi::FrameData& data)
+{
+  fanuc_msgs::msg::Frame result;
+  result.x = data.X;
+  result.y = data.Y;
+  result.z = data.Z;
+  result.w = data.W;
+  result.p = data.P;
+  result.r = data.R;
+  return result;
+}
+
+void GetUFrameData(const std::shared_ptr<fanuc_msgs::srv::GetUFrameData::Request>& request,
+                   const std::shared_ptr<fanuc_msgs::srv::GetUFrameData::Response>& response)
+{
+  std::optional<uint8_t> group;
+  if (request->group != 0)
+  {
+    group = request->group;
+  }
+  try
+  {
+    const auto rmi_response = getRMIInstance()->readUFrameData(request->uframe_number, 1.0, group);
+    response->result = rmi_response.ErrorID;
+    if (response->result == 0)
+    {
+      response->uframe_number = rmi_response.FrameNumber;
+      response->frame = ConvertToFrameMsg(rmi_response.Frame);
+      if (rmi_response.Group.has_value())
+      {
+        response->group = rmi_response.Group.value();
+      }
+      else
+      {
+        response->group = 1;
+      }
+    }
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void SetUFrameData(const std::shared_ptr<fanuc_msgs::srv::SetUFrameData::Request>& request,
+                   const std::shared_ptr<fanuc_msgs::srv::SetUFrameData::Response>& response)
+{
+  std::optional<uint8_t> group;
+  if (request->group != 0)
+  {
+    group = request->group;
+  }
+  try
+  {
+    const auto rmi_response =
+        getRMIInstance()->writeUFrameData(request->uframe_number, ConvertToFramePacket(request->frame), 1.0, group);
+    response->result = rmi_response.ErrorID;
+    if (response->result == 0)
+    {
+      if (rmi_response.Group.has_value())
+      {
+        response->group = rmi_response.Group.value();
+      }
+      else
+      {
+        response->group = 1;
+      }
+    }
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void GetUToolData(const std::shared_ptr<fanuc_msgs::srv::GetUToolData::Request>& request,
+                  const std::shared_ptr<fanuc_msgs::srv::GetUToolData::Response>& response)
+{
+  std::optional<uint8_t> group;
+  if (request->group != 0)
+  {
+    group = request->group;
+  }
+  try
+  {
+    const auto rmi_response = getRMIInstance()->readUToolData(request->utool_number, 1.0, group);
+    response->result = rmi_response.ErrorID;
+    if (response->result == 0)
+    {
+      response->utool_number = rmi_response.ToolNumber;
+      response->frame = ConvertToFrameMsg(rmi_response.Frame);
+      if (rmi_response.Group.has_value())
+      {
+        response->group = rmi_response.Group.value();
+      }
+      else
+      {
+        response->group = 1;
+      }
+    }
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void SetUToolData(const std::shared_ptr<fanuc_msgs::srv::SetUToolData::Request>& request,
+                  const std::shared_ptr<fanuc_msgs::srv::SetUToolData::Response>& response)
+{
+  std::optional<uint8_t> group;
+  if (request->group != 0)
+  {
+    group = request->group;
+  }
+  try
+  {
+    const auto rmi_response =
+        getRMIInstance()->writeUToolData(request->utool_number, ConvertToFramePacket(request->frame), 1.0, group);
+    response->result = rmi_response.ErrorID;
+    if (response->result == 0)
+    {
+      if (rmi_response.Group.has_value())
+      {
+        response->group = rmi_response.Group.value();
+      }
+      else
+      {
+        response->group = 1;
+      }
+    }
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void GetCartesianPosition(const std::shared_ptr<fanuc_msgs::srv::GetCartesianPosition::Request>& request,
+                          const std::shared_ptr<fanuc_msgs::srv::GetCartesianPosition::Response>& response)
+{
+  std::optional<uint8_t> group;
+  if (request->group != 0)
+  {
+    group = request->group;
+  }
+  try
+  {
+    const auto rmi_response = getRMIInstance()->getCartesianPosition(1.0, group);
+    response->result = rmi_response.ErrorID;
+    if (response->result == 0)
+    {
+      if (rmi_response.Group.has_value())
+      {
+        response->group = rmi_response.Group.value();
+      }
+      else
+      {
+        response->group = 1;
+      }
+      response->timetag = rmi_response.TimeTag;
+      response->utool = rmi_response.Configuration.UToolNumber;
+      response->uframe = rmi_response.Configuration.UFrameNumber;
+      response->front = rmi_response.Configuration.Front;
+      response->up = rmi_response.Configuration.Up;
+      response->left = rmi_response.Configuration.Left;
+      response->flip = rmi_response.Configuration.Flip;
+      response->turn4 = rmi_response.Configuration.Turn4;
+      response->turn5 = rmi_response.Configuration.Turn5;
+      response->turn6 = rmi_response.Configuration.Turn6;
+      response->x = rmi_response.Position.X;
+      response->y = rmi_response.Position.Y;
+      response->z = rmi_response.Position.Z;
+      response->w = rmi_response.Position.W;
+      response->p = rmi_response.Position.P;
+      response->r = rmi_response.Position.R;
+      response->ext1 = rmi_response.Position.Ext1;
+      response->ext2 = rmi_response.Position.Ext2;
+      response->ext3 = rmi_response.Position.Ext3;
+    }
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void GetTCPSpeed(const std::shared_ptr<fanuc_msgs::srv::GetTCPSpeed::Request>& request,
+                 const std::shared_ptr<fanuc_msgs::srv::GetTCPSpeed::Response>& response)
+{
+  std::optional<uint8_t> group;
+  if (request->group != 0)
+  {
+    group = request->group;
+  }
+  try
+  {
+    const auto rmi_response = getRMIInstance()->getTCPSpeed(1.0, group);
+    response->result = rmi_response.ErrorID;
+    if (response->result == 0)
+    {
+      if (rmi_response.Group.has_value())
+      {
+        response->group = rmi_response.Group.value();
+      }
+      else
+      {
+        response->group = 1;
+      }
+      response->timetag = rmi_response.TimeTag;
+      response->speed = rmi_response.Speed;
+    }
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void ResetController(const std::shared_ptr<fanuc_msgs::srv::Reset::Request>& request,
+                     const std::shared_ptr<fanuc_msgs::srv::Reset::Response>& response)
+{
+  try
+  {
+    const auto rmi_response = getRMIInstance()->reset(1.0);
+    response->result = rmi_response.ErrorID;
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
   }
 }
 
@@ -568,6 +917,11 @@ void FanucGPIOController::publishRobotStatusExt()
       return;
     }
 
+    if (!rmi_status_publisher_)
+    {
+      return;
+    }
+
     // Check if node context is still valid
     auto node = get_node();
     if (!node)
@@ -608,11 +962,89 @@ void FanucGPIOController::publishRobotStatusExt()
     {
       robot_status_ext_publisher_->publish(robot_status_ext_msg_);
     }
+
+    const auto rmi_status = getRMIInstance()->getStatus(1.0);
+    rmi_status_msg_.program_status = rmi_status.ProgramStatus;
+    rmi_status_msg_.next_sequence = rmi_status.NextSequenceID;
+
+    const auto last_sequence = getRMIInstance()->getLastInstructionResponse();
+    if (last_sequence.has_value())
+    {
+      rmi_status_msg_.last_sequence = last_sequence.value().SequenceID;
+      rmi_status_msg_.last_sequence_error = last_sequence.value().ErrorID;
+      rmi_status_msg_.last_sequence_instruction = last_sequence.value().Instruction;
+      if (rmi_status_msg_.last_sequence_error != 0)
+      {
+        rmi_status_msg_.last_sequence_error_message =
+            getRMIInstance()->getErrorMessageString(rmi_status_msg_.last_sequence_error);
+      }
+      else
+      {
+        rmi_status_msg_.last_sequence_error_message = std::string("");
+      }
+    }
+    else
+    {
+      rmi_status_msg_.last_sequence = 0;
+      rmi_status_msg_.last_sequence_error = 0;
+      rmi_status_msg_.last_sequence_instruction = std::string("");
+    }
+    // Final check before publishing - publisher might be invalid even if pointer is valid
+    if (rmi_status_publisher_)
+    {
+      rmi_status_publisher_->publish(rmi_status_msg_);
+    }
   }
   catch (...)
   {
     // Catch ALL exceptions including segfaults that manifest as exceptions
     // Silently ignore during shutdown
+  }
+}
+
+void FanucGPIOController::switchControlState(
+    const std::shared_ptr<fanuc_msgs::srv::SwitchControlState::Request>& request,
+    const std::shared_ptr<fanuc_msgs::srv::SwitchControlState::Response>& response)
+{
+  switch (request->status)
+  {
+    case fanuc_msgs::srv::SwitchControlState::Request::START:
+    {
+      // Get motion control
+      if (motion_command_type_.load() == fanuc_robot_driver::MotionCommandTypePosition)
+      {
+        const bool result = getClientInstance()->startMotionControl();
+        response->result = (result ? 0 : -1);
+      }
+      else
+      {
+        RCLCPP_INFO(rclcpp::get_logger(kFRGPIOController),
+                    "Motion command type is %d. Control state is set to 1 internally.\n", motion_command_type_.load());
+        getClientInstance()->setDoMotnCtrl(true);
+        response->result = 0;
+      }
+      break;
+    }
+    case fanuc_msgs::srv::SwitchControlState::Request::STOP:
+      // Release motion control
+      if (motion_command_type_.load() == fanuc_robot_driver::MotionCommandTypePosition)
+      {
+        getClientInstance()->stopMotionControl();
+        response->result = 0;
+      }
+      else
+      {
+        RCLCPP_INFO(rclcpp::get_logger(kFRGPIOController),
+                    "Motion command type is %d. Control state is set to 0 internally.\n", motion_command_type_.load());
+        getClientInstance()->setDoMotnCtrl(false);
+        response->result = 0;
+      }
+      break;
+    default:
+      RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), "Wrong status value in SwitchControlState: %d\n",
+                   request->status);
+      response->result = -1;
+      break;
   }
 }
 
@@ -808,6 +1240,7 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
 
   using fanuc_robot_driver::kConnectionStatusName;
   using fanuc_robot_driver::kIsConnectedType;
+  using fanuc_robot_driver::kMotionCommandType;
   using fanuc_robot_driver::kRobotStatusInterfaceName;
   using fanuc_robot_driver::kStatusCollaborativeSpeedScalingType;
   using fanuc_robot_driver::kStatusContactStopModeType;
@@ -818,6 +1251,8 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
 
   index_connection_status_[0] = state_interface_index++;
   state_interface_configuration_.names.push_back(std::string(kConnectionStatusName) + "/" + kIsConnectedType);
+  index_connection_status_[1] = state_interface_index++;
+  state_interface_configuration_.names.push_back(std::string(kConnectionStatusName) + "/" + kMotionCommandType);
 
   index_robot_status_[0] = state_interface_index++;
   state_interface_configuration_.names.push_back(std::string(kRobotStatusInterfaceName) + "/" +
@@ -863,6 +1298,8 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
       get_node()->create_publisher<fanuc_msgs::msg::RobotStatus>("~/robot_status", rclcpp::QoS(1).reliable());
   robot_status_ext_publisher_ =
       get_node()->create_publisher<fanuc_msgs::msg::RobotStatusExt>("~/robot_status_ext", rclcpp::QoS(1).reliable());
+  rmi_status_publisher_ =
+      get_node()->create_publisher<fanuc_msgs::msg::RMIStatus>("~/rmi_status", rclcpp::QoS(1).reliable());
   collaborative_speed_scaling_publisher_ = get_node()->create_publisher<fanuc_msgs::msg::CollaborativeSpeedScaling>(
       "~/collaborative_speed_scaling", rclcpp::QoS(1).reliable());
 
@@ -879,6 +1316,7 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
       std::make_unique<RealtimePublisher<fanuc_msgs::msg::CollaborativeSpeedScaling>>(
           collaborative_speed_scaling_publisher_);
 
+  using namespace std::placeholders;
   get_analog_io_service_ = get_node()->create_service<fanuc_msgs::srv::GetAnalogIO>("~/get_analog_io", &GetAnalogIO);
   get_bool_io_service_ = get_node()->create_service<fanuc_msgs::srv::GetBoolIO>("~/get_bool_io", &GetBoolIO);
   get_num_reg_service_ = get_node()->create_service<fanuc_msgs::srv::GetNumReg>("~/get_num_reg", &GetNumReg);
@@ -897,13 +1335,30 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
       get_node()->create_service<fanuc_msgs::srv::SetPayloadValue>("~/set_payload_value", &SetPayloadValue);
   set_payload_comp_service_ =
       get_node()->create_service<fanuc_msgs::srv::SetPayloadComp>("~/set_payload_comp", &SetPayloadComp);
-  switch_control_state_service_ =
-      get_node()->create_service<fanuc_msgs::srv::SwitchControlState>("~/switch_control_state", &SwitchControlState);
+  read_error_service_ = get_node()->create_service<fanuc_msgs::srv::ReadError>("~/read_error", &ReadError);
+  get_uframe_utool_service_ =
+      get_node()->create_service<fanuc_msgs::srv::GetUFrameUTool>("~/get_uframe_utool", &GetUFrameUTool);
+  set_uframe_utool_service_ =
+      get_node()->create_service<fanuc_msgs::srv::SetUFrameUTool>("~/set_uframe_utool", &SetUFrameUTool);
+  get_uframe_data_service_ =
+      get_node()->create_service<fanuc_msgs::srv::GetUFrameData>("~/get_uframe_data", &GetUFrameData);
+  set_uframe_data_service_ =
+      get_node()->create_service<fanuc_msgs::srv::SetUFrameData>("~/set_uframe_data", &SetUFrameData);
+  get_utool_data_service_ =
+      get_node()->create_service<fanuc_msgs::srv::GetUToolData>("~/get_utool_data", &GetUToolData);
+  set_utool_data_service_ =
+      get_node()->create_service<fanuc_msgs::srv::SetUToolData>("~/set_utool_data", &SetUToolData);
+  get_cartesian_position_service_ = get_node()->create_service<fanuc_msgs::srv::GetCartesianPosition>(
+      "~/get_cartesian_position", &GetCartesianPosition);
+  get_tcp_speed_service_ = get_node()->create_service<fanuc_msgs::srv::GetTCPSpeed>("~/get_tcp_speed", &GetTCPSpeed);
+  switch_control_state_service_ = get_node()->create_service<fanuc_msgs::srv::SwitchControlState>(
+      "~/switch_control_state", std::bind(&FanucGPIOController::switchControlState, this, _1, _2));
+  reset_service_ = get_node()->create_service<fanuc_msgs::srv::Reset>("~/reset", &ResetController);
 
-  reentrant_group_ = get_node()->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+  robot_status_group_ = get_node()->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
   robot_status_ext_timer_ = get_node()->create_wall_timer(
-      std::chrono::milliseconds(33), [this]() { this->publishRobotStatusExt(); }, reentrant_group_);
+      std::chrono::milliseconds(33), [this]() { this->publishRobotStatusExt(); }, robot_status_group_);
 
   return ControllerInterface::on_configure(previous_state);
 }
@@ -915,6 +1370,8 @@ controller_interface::CallbackReturn FanucGPIOController::on_activate(const rclc
 
 controller_interface::return_type FanucGPIOController::update(const rclcpp::Time& time, const rclcpp::Duration& period)
 {
+  motion_command_type_.store(static_cast<int>(state_interfaces_[index_connection_status_[1]].get_value()));
+
   // Publish all state interface data
   if (rt_analog_io_state_publisher_->trylock())
   {
@@ -1028,6 +1485,7 @@ FanucGPIOController::on_deactivate(const rclcpp_lifecycle::State& previous_state
 
   // Reset publisher FIRST so any in-flight callbacks will see null pointer
   robot_status_ext_publisher_.reset();
+  rmi_status_publisher_.reset();
 
   // Cancel and reset timer immediately
   if (robot_status_ext_timer_)
@@ -1050,6 +1508,7 @@ FanucGPIOController::on_deactivate(const rclcpp_lifecycle::State& previous_state
   num_reg_state_publisher_.reset();
   robot_status_publisher_.reset();
   robot_status_ext_publisher_.reset();
+  rmi_status_publisher_.reset();
 
   // Reset all subscribers
   analog_io_cmd_subscriber_.reset();
@@ -1071,7 +1530,17 @@ FanucGPIOController::on_deactivate(const rclcpp_lifecycle::State& previous_state
   set_payload_id_service_.reset();
   set_payload_value_service_.reset();
   set_payload_comp_service_.reset();
+  read_error_service_.reset();
+  get_uframe_utool_service_.reset();
+  set_uframe_utool_service_.reset();
+  get_uframe_data_service_.reset();
+  set_uframe_data_service_.reset();
+  get_utool_data_service_.reset();
+  set_utool_data_service_.reset();
+  get_cartesian_position_service_.reset();
+  get_tcp_speed_service_.reset();
   switch_control_state_service_.reset();
+  reset_service_.reset();
 
   return ControllerInterface::on_deactivate(previous_state);
 }

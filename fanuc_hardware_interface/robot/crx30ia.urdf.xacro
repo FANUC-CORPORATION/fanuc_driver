@@ -15,6 +15,7 @@
   <xacro:arg name="parent_link" default="world"/>
   <xacro:arg name="child_link" default="end_effector"/>
   <xacro:arg name="prefix" default="" />
+  <xacro:arg name="encoding" default="UTF-8"/>
 
   <xacro:include filename="$(find fanuc_crx_description)/urdf/crx30ia_urdf_macro.xacro"/>
   <xacro:if value="$(arg use_mock)">

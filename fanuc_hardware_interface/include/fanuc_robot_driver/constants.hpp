@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -18,6 +18,11 @@ constexpr auto kStatusCollaborativeSpeedScalingType = "collaborative_speed_scali
 
 constexpr auto kConnectionStatusName = "ConnectionStatus";
 constexpr auto kIsConnectedType = "is_connected";
+constexpr auto kMotionCommandType = "motion_command_type";
+constexpr int MotionCommandTypeNone = 0;
+constexpr int MotionCommandTypeInitialState = 1;
+constexpr int MotionCommandTypePosition = 2;
+constexpr int MotionCommandTypeRMI = 3;
 
 constexpr auto kForceInterfaceName = "Force";
 constexpr auto kForceXType = "force_x";
@@ -27,5 +32,8 @@ constexpr auto kMomentXType = "moment_x";
 constexpr auto kMomentYType = "moment_y";
 constexpr auto kMomentZType = "moment_z";
 constexpr auto kForceSensorType = "fs_type";
+
+constexpr auto kRMIInterfaceName = "RMI";
+constexpr auto kRMICommandName = "control";
 
 }  // namespace fanuc_robot_driver

@@ -1,5 +1,5 @@
-# SPDX-FileCopyrightText: 2025, FANUC America Corporation
-# SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+# SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+# SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -25,6 +25,7 @@ find_package(controller_manager_msgs REQUIRED)
 find_package(fanuc_hardware_interface REQUIRED)
 find_package(fanuc_libs REQUIRED)
 find_package(fanuc_msgs REQUIRED)
+find_package(rmi_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(joint_trajectory_controller REQUIRED)
@@ -107,6 +108,28 @@ ament_target_dependencies(fanuc_force_sensor_broadcaster
 target_link_libraries(fanuc_force_sensor_broadcaster fanuc_libs::fanuc_client
     fanuc_hardware_interface::fanuc_hardware_interface_constants)
 
+# Build the FANUC RMI Controller library
+add_library(fanuc_rmi_controller SHARED
+    src/fanuc_rmi_controller.cpp
+)
+
+# Link dependencies
+ament_target_dependencies(fanuc_rmi_controller
+    ament_index_cpp
+    controller_interface
+    controller_manager_msgs
+    rmi_msgs
+    hardware_interface
+    lifecycle_msgs
+    pluginlib
+    rclcpp
+    realtime_tools
+)
+target_link_libraries(fanuc_rmi_controller fanuc_libs::fanuc_client
+    fanuc_hardware_interface::fanuc_hardware_interface_constants)
+
+set_target_properties(fanuc_rmi_controller PROPERTIES CXX_STANDARD 20)
+
 if (BUILD_TESTING)
   find_package(GTest REQUIRED)
   include(GoogleTest)
@@ -117,6 +140,7 @@ endif ()
 # Install the library
 install(TARGETS
     scaled_joint_trajectory_controller fanuc_gpio_controller fanuc_force_sensor_broadcaster
+    fanuc_rmi_controller
     DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -125,6 +149,7 @@ install(FILES
     scaled_joint_trajectory_controller_plugins.xml
     fanuc_gpio_controller_plugins.xml
     fanuc_force_sensor_broadcaster_plugins.xml
+    fanuc_rmi_controller_plugins.xml
     DESTINATION share/${PROJECT_NAME}
 )
 
@@ -132,5 +157,6 @@ install(FILES
 pluginlib_export_plugin_description_file(controller_interface scaled_joint_trajectory_controller_plugins.xml)
 pluginlib_export_plugin_description_file(controller_interface fanuc_gpio_controller_plugins.xml)
 pluginlib_export_plugin_description_file(controller_interface fanuc_force_sensor_broadcaster_plugins.xml)
+pluginlib_export_plugin_description_file(controller_interface fanuc_rmi_controller_plugins.xml)
 
 ament_package()

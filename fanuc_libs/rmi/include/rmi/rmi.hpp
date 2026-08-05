@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -11,6 +11,7 @@
 #include <optional>
 
 #include "rmi/packets.hpp"
+#include "rmi/struct.hpp"
 
 namespace rmi
 {
@@ -31,7 +32,13 @@ public:
 
   virtual ProgramCallPacket::Response programCall(const std::string& program_name, std::optional<double> timeout) = 0;
 
+  virtual ProgramCallPacket::Response programCall(const std::string& program_name, std::optional<double> timeout,
+                                                  const std::vector<RMICallParam>& params) = 0;
+
   virtual ProgramCallPacket::Request programCallNonBlocking(const std::string& program_name) = 0;
+
+  virtual ProgramCallPacket::Request programCallNonBlocking(const std::string& program_name,
+                                                            const std::vector<RMICallParam>& params) = 0;
 
   virtual StatusRequestPacket::Response getStatus(std::optional<double> timeout) = 0;
 
@@ -46,6 +53,28 @@ public:
   virtual ResetRobotPacket::Response reset(std::optional<double> timeout) = 0;
 
   virtual ReadErrorPacket::Response readError(std::optional<double> timeout) = 0;
+
+  virtual ReadErrorPacket::Response readError(std::optional<double> timeout, const std::optional<uint8_t> count) = 0;
+
+  virtual GetUFrameToolFramePacket::Response getUFrameUTool(std::optional<double> timeout,
+                                                            const std::optional<uint8_t> group) = 0;
+  virtual SetUFrameToolFramePacket::Response setUFrameUTool(const int uframe, const int utool,
+                                                            std::optional<double> timeout,
+                                                            const std::optional<uint8_t> group) = 0;
+
+  virtual ReadUFrameDataPacket::Response readUFrameData(const int uframe, std::optional<double> timeout,
+                                                        const std::optional<uint8_t> group) = 0;
+
+  virtual WriteUFrameDataPacket::Response writeUFrameData(const int uframe, const FrameData data,
+                                                          std::optional<double> timeout,
+                                                          const std::optional<uint8_t> group) = 0;
+
+  virtual ReadUToolDataPacket::Response readUToolData(const int utool, std::optional<double> timeout,
+                                                      const std::optional<uint8_t> group) = 0;
+
+  virtual WriteUToolDataPacket::Response writeUToolData(const int utool, const FrameData data,
+                                                        std::optional<double> timeout,
+                                                        const std::optional<uint8_t> group) = 0;
 
   virtual WritePositionRegisterPacket::Response
   writePositionRegister(int register_number, const std::string& representation, const ConfigurationData& configuration,
@@ -96,6 +125,11 @@ public:
   virtual ReadJointAnglesPacket::Response readJointAngles(const std::optional<uint8_t>& group,
                                                           std::optional<double> timeout) = 0;
 
+  virtual GetCartesianPositionPacket::Response getCartesianPosition(std::optional<double> timeout,
+                                                                    const std::optional<uint8_t> group) = 0;
+
+  virtual GetTCPSpeedPacket::Response getTCPSpeed(std::optional<double> timeout, const std::optional<uint8_t> group) = 0;
+
   virtual JointMotionJRepPacket::Response sendJointMotion(JointMotionJRepPacket::Request joint_motion_request,
                                                           std::optional<double> timeout) = 0;
 
@@ -106,6 +140,35 @@ public:
   virtual std::optional<CommunicationPacket> checkCommunicationPacket() = 0;
 
   virtual std::optional<UnknownPacket> checkUnknownPacket() = 0;
+
+  virtual std::optional<InstructionResponse> getLastInstructionResponse() = 0;
+
+  virtual void sendRMIPacketNonBlocking(JointMotionPacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(JointMotionJRepPacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(JointRelativePacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(JointRelativeJRepPacket::Request& packet) = 0;
+
+  virtual void sendRMIPacketNonBlocking(LinearMotionPacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(LinearMotionJRepPacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(LinearRelativePacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(LinearRelativeJRepPacket::Request& packet) = 0;
+
+  virtual void sendRMIPacketNonBlocking(CircularMotionPacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(CircularRelativePacket::Request& packet) = 0;
+
+  virtual void sendRMIPacketNonBlocking(SplineMotionPacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(SplineMotionJRepPacket::Request& packet) = 0;
+
+  virtual void sendRMIPacketNonBlocking(WaitForDINPacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(SetUFramePacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(SetToolFramePacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(WaitForTimePacket::Request& packet) = 0;
+  virtual void sendRMIPacketNonBlocking(SetPayloadInstructionPacket::Request& packet) = 0;
+
+  virtual std::string getErrorMessageString(const uint32_t error_code) = 0;
+
+  virtual int32_t getRemainingBuffuerSize() = 0;
+  virtual void setEncoding(const std::string& encoding) = 0;
 };
 
 class RMIConnection final : public RMIConnectionInterface
@@ -131,7 +194,13 @@ public:
 
   ProgramCallPacket::Response programCall(const std::string& program_name, std::optional<double> timeout) override;
 
+  ProgramCallPacket::Response programCall(const std::string& program_name, std::optional<double> timeout,
+                                          const std::vector<RMICallParam>& params) override;
+
   ProgramCallPacket::Request programCallNonBlocking(const std::string& program_name) override;
+
+  ProgramCallPacket::Request programCallNonBlocking(const std::string& program_name,
+                                                    const std::vector<RMICallParam>& params) override;
 
   StatusRequestPacket::Response getStatus(std::optional<double> timeout) override;
 
@@ -146,6 +215,26 @@ public:
   ResetRobotPacket::Response reset(std::optional<double> timeout) override;
 
   ReadErrorPacket::Response readError(std::optional<double> timeout) override;
+
+  ReadErrorPacket::Response readError(std::optional<double> timeout, const std::optional<uint8_t> count) override;
+
+  GetUFrameToolFramePacket::Response getUFrameUTool(std::optional<double> timeout,
+                                                    const std::optional<uint8_t> group) override;
+
+  SetUFrameToolFramePacket::Response setUFrameUTool(const int uframe, const int utool, std::optional<double> timeout,
+                                                    const std::optional<uint8_t> group) override;
+
+  ReadUFrameDataPacket::Response readUFrameData(const int uframe, std::optional<double> timeout,
+                                                const std::optional<uint8_t> group) override;
+
+  WriteUFrameDataPacket::Response writeUFrameData(const int uframe, const FrameData data, std::optional<double> timeout,
+                                                  const std::optional<uint8_t> group) override;
+
+  ReadUToolDataPacket::Response readUToolData(const int utool, std::optional<double> timeout,
+                                              const std::optional<uint8_t> group) override;
+
+  WriteUToolDataPacket::Response writeUToolData(const int utool, const FrameData data, std::optional<double> timeout,
+                                                const std::optional<uint8_t> group) override;
 
   WritePositionRegisterPacket::Response writePositionRegister(int register_number, const std::string& representation,
                                                               const ConfigurationData& configuration,
@@ -192,9 +281,36 @@ public:
 
   ReadJointAnglesPacket::Response readJointAngles(const std::optional<uint8_t>& group,
                                                   std::optional<double> timeout) override;
+  GetCartesianPositionPacket::Response getCartesianPosition(std::optional<double> timeout,
+                                                            const std::optional<uint8_t> group) override;
+  GetTCPSpeedPacket::Response getTCPSpeed(std::optional<double> timeout, const std::optional<uint8_t> group) override;
 
   JointMotionJRepPacket::Response sendJointMotion(JointMotionJRepPacket::Request joint_motion_request,
                                                   std::optional<double> timeout) override;
+
+  void sendRMIPacketNonBlocking(JointMotionPacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(JointMotionJRepPacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(JointRelativePacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(JointRelativeJRepPacket::Request& packet) override;
+
+  void sendRMIPacketNonBlocking(LinearMotionPacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(LinearMotionJRepPacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(LinearRelativePacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(LinearRelativeJRepPacket::Request& packet) override;
+
+  void sendRMIPacketNonBlocking(CircularMotionPacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(CircularRelativePacket::Request& packet) override;
+
+  void sendRMIPacketNonBlocking(SplineMotionPacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(SplineMotionJRepPacket::Request& packet) override;
+
+  void sendRMIPacketNonBlocking(WaitForDINPacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(SetUFramePacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(SetToolFramePacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(WaitForTimePacket::Request& packet) override;
+  void sendRMIPacketNonBlocking(SetPayloadInstructionPacket::Request& packet) override;
+
+  std::string getErrorMessageString(const uint32_t error_code) override;
 
   std::optional<SystemFaultPacket> checkSystemFault() override;
 
@@ -203,6 +319,12 @@ public:
   std::optional<CommunicationPacket> checkCommunicationPacket() override;
 
   std::optional<UnknownPacket> checkUnknownPacket() override;
+
+  std::optional<InstructionResponse> getLastInstructionResponse() override;
+
+  int32_t getRemainingBuffuerSize() override;
+
+  void setEncoding(const std::string& encoding) override;
 
   template <typename T>
   typename T::Response sendRMIPacket(typename T::Request& request_packet, std::optional<double> timeout);
@@ -220,16 +342,27 @@ private:
   std::optional<T> checkPushPacket();
 
   void drainConnectionBuffer();
+  bool processInstructionResponse(std::string& json_response);
+  template <typename T>
+  std::optional<T> checkForPacketInJSONResponses(std::list<std::string>::iterator& it,
+                                                 std::list<std::string>& json_responses);
+
+  template <typename T>
+  void sendRMIPacketNonBlockingImpl(typename T::Request& request_packet);
 
   const std::string robot_ip_address_;
   const uint16_t rmi_port_;
 
+  std::string encoding_;
   int32_t sequence_number_;
   std::list<std::string> json_responses_;
   mutable std::mutex mutex_;
   mutable std::mutex motion_mutex_;
 
   const std::unique_ptr<PConnectionImpl> connection_impl_;
+
+  std::optional<InstructionResponse> last_instruction_response_;
+  mutable std::mutex instruction_mutex_;
 };
 
 }  // namespace rmi

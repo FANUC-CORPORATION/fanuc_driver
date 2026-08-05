@@ -20,13 +20,19 @@ public:
 
   /**
    * @brief Sends a start packet to initiate the stream motion connection.
+   * As its side effect, internal sequence numbers are reset to 0.
    */
-  virtual void sendStartPacket() const = 0;
+  virtual void sendStartPacket() = 0;
 
   /**
    * @brief Sends a stop packet to terminate the stream motion connection.
    */
   virtual void sendStopPacket() const = 0;
+
+  /**
+   * @brief Clear recv buffer for the socket.
+   */
+  virtual void clearRecvBuffer() = 0;
 
   /**
    * @brief Sends a command packet with the specified positions.
@@ -83,9 +89,11 @@ public:
 
   StreamMotionConnection& operator=(const StreamMotionConnection&) = delete;
 
-  void sendStartPacket() const override;
+  void sendStartPacket() override;
 
   void sendStopPacket() const override;
+
+  void clearRecvBuffer() override;
 
   void sendCommand(const std::array<double, kMaxAxisNumber>& command_pos, bool is_last_command,
                    const std::array<uint8_t, 256>& io_command, const uint8_t do_motn_ctrl) const override;

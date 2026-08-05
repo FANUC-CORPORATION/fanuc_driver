@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025, FANUC America Corporation
-// SPDX-FileCopyrightText: 2025, FANUC CORPORATION
+// SPDX-FileCopyrightText: 2025-2026, FANUC America Corporation
+// SPDX-FileCopyrightText: 2025-2026, FANUC CORPORATION
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "fanuc_client/gpio_buffer.hpp"
-#include "fanuc_robot_driver/constants.hpp"
 #include "gpio_config/gpio_config.hpp"
 #include "hardware_interface/system_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -292,6 +291,9 @@ FanucHardwareInterface::FanucHardwareInterface()
   , joint_targets_degrees_{ Eigen::VectorXd::Zero(9) }
   , stream_motion_port_(60015)
   , rmi_port_(1600)
+  , motion_command_type_(MotionCommandType::InitialState)
+  , motion_command_type_dbl_(0.0)
+  , hw_active_(false)
 {
 }
 
@@ -335,6 +337,7 @@ hardware_interface::CallbackReturn
 FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Preparing FANUC ROS2 HW interface");
+  hw_active_.store(false);
   ip_address_ = info_.hardware_parameters["robot_ip"];
   bool initial_motion_control = true;
   try
@@ -346,6 +349,15 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
         StringToInt("out_cmd_interp_buff_target", info_.hardware_parameters["out_cmd_interp_buff_target"]);
     force_sensor_type_ = StringToInt("force_sensor_type", info_.hardware_parameters["force_sensor_type"]);
     initial_motion_control = (StringToInt("motion_control", info_.hardware_parameters["motion_control"]) == 1);
+    auto it = info_.hardware_parameters.find("encoding");
+    if (it != info_.hardware_parameters.end())
+    {
+      encoding_ = info_.hardware_parameters["encoding"];
+    }
+    else
+    {
+      encoding_ = "UTF-8";
+    }
   }
   catch (const std::exception& e)
   {
@@ -355,6 +367,7 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
   RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "payload_schedule: " << payload_schedule_);
   RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Starting RMI with: " << ip_address_);
   RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Initial Motion Control Mode: " << initial_motion_control);
+  RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "Encoding: " << encoding_);
 
   // Initialize the driver client
   for (int i = 0; i < kNumberConnectionAttempts; i++)
@@ -363,7 +376,8 @@ FanucHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previous_s
     try
     {
       fanuc_client_.reset();
-      fanuc_client_ = std::make_unique<fanuc_client::FanucClient>(ip_address_, stream_motion_port_, rmi_port_);
+      fanuc_client_ = std::make_unique<fanuc_client::FanucClient>(ip_address_, stream_motion_port_, rmi_port_, nullptr,
+                                                                  nullptr, encoding_);
       fanuc_client_->setDoMotnCtrl(initial_motion_control);
       fanuc_client_->setOutCmdInterpBuffTarget(out_cmd_interp_buff_target_);
       fanuc_client_->setForceSensorType(force_sensor_type_);
@@ -397,18 +411,22 @@ hardware_interface::CallbackReturn FanucHardwareInterface::on_activate(const rcl
   joint_targets_degrees_ = fanuc_client_->readJointAngles();
   joint_targets_.array() = M_PI / 180.0 * joint_targets_degrees_.array();
 
+  hw_active_.store(true);
+
   return CallbackReturn::SUCCESS;
 }
 
 hardware_interface::CallbackReturn FanucHardwareInterface::on_deactivate(const rclcpp_lifecycle::State& previous_state)
 {
   RCLCPP_INFO_STREAM(rclcpp::get_logger(kFRHWInterface), "deactivating stream motion");
+  hw_active_.store(false);
   fanuc_client_->stopRealtimeStream();
   return CallbackReturn::SUCCESS;
 }
 
 hardware_interface::CallbackReturn FanucHardwareInterface::on_cleanup(const rclcpp_lifecycle::State& previous_state)
 {
+  hw_active_.store(false);
   fanuc_client_.reset();
   return CallbackReturn::SUCCESS;
 }
@@ -437,6 +455,7 @@ std::vector<hardware_interface::StateInterface> FanucHardwareInterface::export_s
                                 &robot_status_.collaborative_speed_scaling);
 
   state_interfaces.emplace_back(kConnectionStatusName, kIsConnectedType, &robot_status_.is_connected);
+  state_interfaces.emplace_back(kConnectionStatusName, kMotionCommandType, &motion_command_type_dbl_);
 
   state_interfaces.emplace_back(kForceInterfaceName, kForceXType, &force_sensor_.force_x);
   state_interfaces.emplace_back(kForceInterfaceName, kForceYType, &force_sensor_.force_y);
@@ -471,13 +490,164 @@ std::vector<hardware_interface::CommandInterface> FanucHardwareInterface::export
     command_interfaces.emplace_back(io_command->name(), std::to_string(io_command->index), &io_command->value);
   }
 
+  command_interfaces.emplace_back(kRMIInterfaceName, kRMICommandName, &dummy_rmi_command_);
+
   return command_interfaces;
+}
+
+hardware_interface::return_type
+FanucHardwareInterface::prepare_command_mode_switch(const std::vector<std::string>& start_interfaces,
+                                                    const std::vector<std::string>& stop_interfaces)
+{
+  bool start_rmi_control = false;
+  bool stop_rmi_control = false;
+  bool rmi_control_is_active = false;
+
+  bool start_position_control = false;
+  bool stop_position_control = false;
+  bool position_control_is_active = false;
+  int start_position_control_num = 0;
+
+  int joints_size = info_.joints.size();
+  std::vector<std::string> position_interface_names(joints_size);
+
+  // List position interface names
+  for (int ii = 0; ii < joints_size; ii++)
+  {
+    position_interface_names[ii] = info_.joints[ii].name + "/" + hardware_interface::HW_IF_POSITION;
+  }
+
+  // Check stop interfaces
+  for (const std::string& command : stop_interfaces)
+  {
+    if (std::any_of(position_interface_names.begin(), position_interface_names.end(),
+                    [&command](std::string& value) { return (value == command); }))
+    {
+      stop_position_control = true;
+    }
+    if (command == std::string(kRMIInterfaceName) + "/" + std::string(kRMICommandName))
+    {
+      stop_rmi_control = true;
+    }
+  }
+
+  // Check requested interfaces
+  for (const std::string& command : start_interfaces)
+  {
+    if (std::any_of(position_interface_names.begin(), position_interface_names.end(),
+                    [&command](std::string& value) { return (value == command); }))
+    {
+      start_position_control_num += 1;
+    }
+    if (command == std::string(kRMIInterfaceName) + "/" + std::string(kRMICommandName))
+    {
+      start_rmi_control = true;
+    }
+  }
+
+  // Check joint number
+  if (start_position_control_num != 0)
+  {
+    if (start_position_control_num != joints_size)
+    {
+      RCLCPP_ERROR(rclcpp::get_logger(kFRHWInterface),
+                   "Requested position command number does not match the joint size. %d %d", start_position_control_num,
+                   joints_size);
+      return hardware_interface::return_type::ERROR;
+    }
+    else
+    {
+      start_position_control = true;
+    }
+  }
+
+  if (!(start_position_control || stop_position_control || start_rmi_control || stop_rmi_control))
+  {
+    RCLCPP_INFO(rclcpp::get_logger(kFRHWInterface), "There is no motion commands in this switching.");
+    return hardware_interface::return_type::OK;
+  }
+  rmi_control_is_active = (motion_command_type_ == MotionCommandType::RMI);
+  position_control_is_active = (motion_command_type_ == MotionCommandType::Position);
+  RCLCPP_INFO(rclcpp::get_logger(kFRHWInterface), "RMI: start %d stop %d active %d", start_rmi_control,
+              stop_rmi_control, rmi_control_is_active);
+  RCLCPP_INFO(rclcpp::get_logger(kFRHWInterface), "POSITION: start %d stop %d active %d", start_position_control,
+              stop_position_control, position_control_is_active);
+  if ((start_rmi_control || (rmi_control_is_active && !stop_rmi_control)) &&
+      (start_position_control || (position_control_is_active && !stop_position_control)))
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRHWInterface), "Position and RMI commands are requested simultaneously.");
+    return hardware_interface::return_type::ERROR;
+  }
+
+  // Stop commands
+  if (stop_position_control || (start_rmi_control && (motion_command_type_ == MotionCommandType::InitialState)))
+  {
+    if (fanuc_client_ != nullptr)
+    {
+      // Stop STMO
+      auto const motion_control = fanuc_client_->getDoMotnCtrl();
+      try
+      {
+        fanuc_client_->stopMotionControl();  // motion_control_ is set to false internally.
+      }
+      catch (const std::runtime_error& e)
+      {
+        // just continue.
+      }
+      fanuc_client_->setDoMotnCtrl(motion_control);  // restore motion_control after stopMotionControl;
+    }
+  }
+
+  // Start commands
+  if (start_position_control)
+  {
+    if (motion_command_type_ != MotionCommandType::InitialState)
+    {
+      if (fanuc_client_->getDoMotnCtrl())
+      {
+        fanuc_client_->startMotionControl();
+      }
+    }
+  }
+
+  // Save command type
+  if (start_position_control)
+  {
+    motion_command_type_ = MotionCommandType::Position;
+  }
+  else if (start_rmi_control)
+  {
+    motion_command_type_ = MotionCommandType::RMI;
+  }
+  else
+  {
+    if (stop_position_control || stop_rmi_control)
+    {
+      motion_command_type_ = MotionCommandType::None;
+    }
+  }
+  return hardware_interface::return_type::OK;
+}
+
+hardware_interface::return_type
+FanucHardwareInterface::perform_command_mode_switch(const std::vector<std::string>& start_interfaces,
+                                                    const std::vector<std::string>& stop_interfaces)
+{
+  // nothing to do
+  return hardware_interface::return_type::OK;
 }
 
 hardware_interface::return_type FanucHardwareInterface::read(const rclcpp::Time& /*time*/,
                                                              const rclcpp::Duration& period)
 {
+  motion_command_type_dbl_ = static_cast<double>(static_cast<int>(motion_command_type_.load()));
   robot_status_.is_connected = fanuc_client_ != nullptr && fanuc_client_->isStreaming();
+  if (!hw_active_.load())
+  {
+    // is_connected should be updated beforehand.
+    // Do nothing
+    return hardware_interface::return_type::OK;
+  }
   if (!robot_status_.is_connected)
   {
     if (fanuc_client_ != nullptr)
@@ -559,6 +729,11 @@ hardware_interface::return_type FanucHardwareInterface::read(const rclcpp::Time&
 hardware_interface::return_type FanucHardwareInterface::write(const rclcpp::Time& time, const rclcpp::Duration& period)
 {
   robot_status_.is_connected = fanuc_client_ != nullptr && fanuc_client_->isStreaming();
+  if (!hw_active_.load())
+  {
+    // Do nothing
+    return hardware_interface::return_type::OK;
+  }
   if (!robot_status_.is_connected)
   {
     if (fanuc_client_ != nullptr)

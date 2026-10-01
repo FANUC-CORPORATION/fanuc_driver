@@ -407,6 +407,68 @@ void SetPayloadComp(const std::shared_ptr<fanuc_msgs::srv::SetPayloadComp::Reque
   }
 }
 
+void GetPayloadID(const std::shared_ptr<fanuc_msgs::srv::GetPayloadID::Request>& request,
+                  const std::shared_ptr<fanuc_msgs::srv::GetPayloadID::Response>& response)
+{
+  try
+  {
+    const rmi::GetPayloadPacket::Response rmi_response = getRMIInstance()->getPayloadSchedule(1.0);
+    response->payload_schedule_id = rmi_response.ScheduleNumber;
+    response->result = rmi_response.ErrorID;
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void GetPayloadValue(const std::shared_ptr<fanuc_msgs::srv::GetPayloadValue::Request>& request,
+                     const std::shared_ptr<fanuc_msgs::srv::GetPayloadValue::Response>& response)
+{
+  try
+  {
+    const rmi::GetPayloadValuePacket::Response rmi_response =
+        getRMIInstance()->getPayloadValue(request->payload_schedule_id, 1.0);
+    response->mass = rmi_response.Mass;
+    response->cg_x = rmi_response.CG_X / 100;
+    response->cg_y = rmi_response.CG_Y / 100;
+    response->cg_z = rmi_response.CG_Z / 100;
+    response->in_x = rmi_response.IN_X / 10000;
+    response->in_y = rmi_response.IN_Y / 10000;
+    response->in_z = rmi_response.IN_Z / 10000;
+    response->result = rmi_response.ErrorID;
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
+void GetPayloadComp(const std::shared_ptr<fanuc_msgs::srv::GetPayloadComp::Request>& request,
+                    const std::shared_ptr<fanuc_msgs::srv::GetPayloadComp::Response>& response)
+{
+  try
+  {
+    const rmi::GetPayloadCompPacket::Response rmi_response =
+        getRMIInstance()->getPayloadComp(request->payload_schedule_id, 1.0);
+    response->mass = rmi_response.Mass;
+    response->cg_x = rmi_response.CG_X / 100;
+    response->cg_y = rmi_response.CG_Y / 100;
+    response->cg_z = rmi_response.CG_Z / 100;
+    response->in_x = rmi_response.IN_X / 10000;
+    response->in_y = rmi_response.IN_Y / 10000;
+    response->in_z = rmi_response.IN_Z / 10000;
+    response->result = rmi_response.ErrorID;
+  }
+  catch (std::runtime_error& e)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger(kFRGPIOController), e.what());
+    response->result = 1;
+  }
+}
+
 void ReadError(const std::shared_ptr<fanuc_msgs::srv::ReadError::Request>& request,
                const std::shared_ptr<fanuc_msgs::srv::ReadError::Response>& response)
 {
@@ -1335,6 +1397,12 @@ FanucGPIOController::on_configure(const rclcpp_lifecycle::State& previous_state)
       get_node()->create_service<fanuc_msgs::srv::SetPayloadValue>("~/set_payload_value", &SetPayloadValue);
   set_payload_comp_service_ =
       get_node()->create_service<fanuc_msgs::srv::SetPayloadComp>("~/set_payload_comp", &SetPayloadComp);
+  get_payload_id_service_ =
+      get_node()->create_service<fanuc_msgs::srv::GetPayloadID>("~/get_payload_id", &GetPayloadID);
+  get_payload_value_service_ =
+      get_node()->create_service<fanuc_msgs::srv::GetPayloadValue>("~/get_payload_value", &GetPayloadValue);
+  get_payload_comp_service_ =
+      get_node()->create_service<fanuc_msgs::srv::GetPayloadComp>("~/get_payload_comp", &GetPayloadComp);
   read_error_service_ = get_node()->create_service<fanuc_msgs::srv::ReadError>("~/read_error", &ReadError);
   get_uframe_utool_service_ =
       get_node()->create_service<fanuc_msgs::srv::GetUFrameUTool>("~/get_uframe_utool", &GetUFrameUTool);
@@ -1530,6 +1598,9 @@ FanucGPIOController::on_deactivate(const rclcpp_lifecycle::State& previous_state
   set_payload_id_service_.reset();
   set_payload_value_service_.reset();
   set_payload_comp_service_.reset();
+  get_payload_id_service_.reset();
+  get_payload_value_service_.reset();
+  get_payload_comp_service_.reset();
   read_error_service_.reset();
   get_uframe_utool_service_.reset();
   set_uframe_utool_service_.reset();

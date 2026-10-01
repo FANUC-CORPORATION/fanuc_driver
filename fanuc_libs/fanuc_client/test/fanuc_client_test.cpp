@@ -183,6 +183,11 @@ public:
               (uint8_t payload_schedule_number, float mass, float cg_x, float cg_y, float cg_z, float in_x, float in_y,
                float in_z, std::optional<double> timeout),
               (override));
+  MOCK_METHOD(rmi::GetPayloadPacket::Response, getPayloadSchedule, (std::optional<double> timeout), (override));
+  MOCK_METHOD(rmi::GetPayloadValuePacket::Response, getPayloadValue,
+              (uint16_t payload_schedule_number, std::optional<double> timeout), (override));
+  MOCK_METHOD(rmi::GetPayloadCompPacket::Response, getPayloadComp,
+              (uint16_t payload_schedule_number, std::optional<double> timeout), (override));
   MOCK_METHOD(rmi::JointMotionJRepPacket::Response, sendJointMotion,
               (rmi::JointMotionJRepPacket::Request joint_motion_request, const std::optional<double> timeout),
               (override));

@@ -62,6 +62,9 @@ FromJSON<ReadDigitalInputPortPacket::Response>(const std::string&);
 template std::optional<SetPayloadPacket::Response> FromJSON<SetPayloadPacket::Response>(const std::string&);
 template std::optional<SetPayloadValuePacket::Response> FromJSON<SetPayloadValuePacket::Response>(const std::string&);
 template std::optional<SetPayloadCompPacket::Response> FromJSON<SetPayloadCompPacket::Response>(const std::string&);
+template std::optional<GetPayloadPacket::Response> FromJSON<GetPayloadPacket::Response>(const std::string&);
+template std::optional<GetPayloadValuePacket::Response> FromJSON<GetPayloadValuePacket::Response>(const std::string&);
+template std::optional<GetPayloadCompPacket::Response> FromJSON<GetPayloadCompPacket::Response>(const std::string&);
 template std::optional<ReadNumericRegisterPacket::Response>
 FromJSON<ReadNumericRegisterPacket::Response>(const std::string&);
 template std::optional<WriteNumericRegisterPacket::Response>

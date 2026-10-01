@@ -1,0 +1,6 @@
+# Cartesian limits for Pilz LIN motion.
+cartesian_limits:
+  max_trans_vel: 0.20
+  max_trans_acc: 0.50
+  max_trans_dec: -0.50
+  max_rot_vel: 0.50

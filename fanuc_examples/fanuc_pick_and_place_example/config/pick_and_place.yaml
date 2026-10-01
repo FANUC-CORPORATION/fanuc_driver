@@ -1,0 +1,152 @@
+/**:
+  ros__parameters:
+    # Application and startup parameters.
+    run_demo: true
+    # false: a finite demo exits and lets launch shut down automatically.
+    keep_alive_after_demo: false
+    startup_delay_sec: 3.0
+    startup_timeout_sec: 30.0
+    scene_update_delay_sec: 0.10
+    group_name: manipulator
+    world_frame: world
+    tip_link: flange
+    trajectory_controller_name: joint_trajectory_controller
+    joint_names: [J1, J2, J3, J4, J5, J6]
+    home_joint_positions: [0.0, 0.0, 0.0, 0.0, -1.57079632679, 0.0]
+
+    # Planning, IK, and joint-travel limits.
+    ompl_profile: ompl_rrtc
+    linear_profile: pilz_lin
+    ik_timeout_sec: 0.10
+    # Maximum number of IK seeds evaluated against the Planning Scene.
+    ik.collision_free_attempts: 24
+    # Number and minimum separation of ordered OMPL joint-goal fallbacks.
+    ik.transfer_goal_candidates: 4
+    # Tighter bounds used only for orientation-constrained transfers.
+    ik.constrained.collision_free_attempts: 12
+    ik.constrained.transfer_goal_candidates: 1
+    ik.candidate_separation_rad: 0.05
+    # Orientation-constraint tolerance for enabled transfer path constraints.
+    orientation_tolerance_rad: 0.15
+    # Joint-goal tolerance at each OMPL transfer endpoint.
+    motion.ompl.goal_joint_tolerance_rad: 0.001
+    max_joint_travel_rad: 3.14159265359
+    max_trajectory_joint_step_rad: 1.0
+    max_trajectory_joint_travel_rad: 6.28318530718
+    # 0: unlimited OMPL retries; positive: retries after the initial request.
+    ompl.max_retries: 0
+    ompl.retry_delay_sec: 0.50
+    # Concurrent profiles and per-planner budgets for unsplit transfer requests.
+    motion.ompl.unconstrained.parallel_profiles: [ompl_bkpiece, ompl_bkpiece_coarse, ompl_bkpiece_fine]
+    motion.ompl.unconstrained.planning_time_sec: 2.0
+    motion.ompl.constrained.parallel_profiles: [ompl_bkpiece, ompl_bkpiece_coarse, ompl_bkpiece_fine]
+    motion.ompl.constrained.planning_time_sec: 2.0
+    # Per-joint weights for plan-solution travel selection.
+    motion.ompl.joint_travel_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    # Joint names compared first during IK and plan-solution selection.
+    motion.ompl.priority_joint_names: [J4]
+    # Accept a result within this configured-joint travel without another request.
+    motion.ompl.priority_joint_early_acceptance_rad: 1.57079632679
+    # Reject a transfer whose cumulative priority-joint travel exceeds 120 degrees.
+    motion.ompl.priority_joint_max_travel_rad: 2.09439510239
+    # Additional complete-transfer requests when configured-joint travel is too high.
+    motion.ompl.priority_joint_additional_retries: 0
+    motion.ompl.planning_attempts: 1
+    # false: goal orientation only; true: orientation constraint on the complete transfer.
+    motion.ompl.preserve_orientation_during_transfer: true
+    motion.ompl.max_velocity_scaling_factor: 0.5
+    motion.ompl.max_acceleration_scaling_factor: 0.5
+    motion.linear.planning_time_sec: 5.0
+    motion.linear.planning_attempts: 1
+    motion.linear.max_velocity_scaling_factor: 0.20
+    motion.linear.max_acceleration_scaling_factor: 0.20
+    # OMPL workspace bounds in world coordinates.
+    planning.workspace_min: [-2.0, -2.0, -1.0]
+    planning.workspace_max: [2.0, 2.0, 2.0]
+
+    # Require measured joints to settle after the trajectory action succeeds.
+    execution.goal_tolerance_rad: 0.005
+    execution.stopped_velocity_tolerance_rad_per_sec: 0.02
+    execution.goal_stable_duration_sec: 0.20
+    execution.goal_wait_timeout_sec: 30.0
+
+    # Flange target positions in world coordinates; orientation uses the home pose.
+    pick.approach_position: [0.65, -0.4, 0.3]
+    pick.position: [0.65, -0.4, 0.15]
+    place.approach_position: [0.65, 0.4, 0.3]
+    place.position: [0.65, 0.4, 0.15]
+    # Virtual work geometry and A/B positions.
+    work.id: virtual_work
+    work.size: [0.05, 0.05, 0.05]
+    work.pick_position: [0.65, -0.4, 0.025]
+    work.place_position: [0.65, 0.4, 0.025]
+    work.grasp_offset_in_tip: [0.125, 0.0, 0.0]
+
+    # Interactive collision-obstacle geometry and initial position.
+    obstacle.id: movable_obstacle
+    obstacle.size: [0.70, 0.10, 0.30]
+    obstacle.position: [0.65, 0.0, 0.15]
+
+    # Collision-floor geometry and position.
+    floor.enabled: true
+    floor.id: floor
+    floor.size: [1.4, 1.5, 0.1]
+    floor.position: [0.4, 0.0, -0.051]
+
+    # Collision-ceiling geometry and position. The lower surface is z=1.00 m.
+    ceiling.enabled: true
+    ceiling.id: ceiling
+    ceiling.size: [1.4, 1.5, 0.1]
+    ceiling.position: [0.4, 0.0, 1.15]
+
+    # Robot-rear collision-guard geometry and position.
+    rear_guard.enabled: true
+    rear_guard.id: rear_guard
+    rear_guard.size: [0.10, 1.5, 1.1]
+    rear_guard.position: [-0.25, 0.0, 0.55]
+
+    # Robot-front collision-guard geometry. The inner surface is x=1.00 m.
+    front_guard.enabled: true
+    front_guard.id: front_guard
+    front_guard.size: [0.10, 1.5, 1.1]
+    front_guard.position: [1.05, 0.0, 0.55]
+
+    # Robot-left guard when the robot faces +X. The inner surface is y=0.65 m.
+    left_guard.enabled: true
+    left_guard.id: left_guard
+    left_guard.size: [1.2, 0.10, 1.1]
+    left_guard.position: [0.4, 0.7, 0.55]
+
+    # Robot-right guard when the robot faces +X. The inner surface is y=-0.65 m.
+    right_guard.enabled: true
+    right_guard.id: right_guard
+    right_guard.size: [1.2, 0.10, 1.1]
+    right_guard.position: [0.4, -0.7, 0.55]
+
+    # Virtual parallel hand. Gaps are clear distances between the inner finger faces.
+    hand.command_type: RO
+    hand.command_index: 1
+    hand.status_type: RO
+    hand.status_index: 1
+    hand.feedback_timeout_sec: 5.0
+    hand.mock_feedback_delay_sec: 0.20
+    hand.finger_length: 0.14
+    hand.finger_width: 0.025
+    hand.finger_height: 0.04
+    hand.open_gap: 0.12
+    hand.closed_gap: 0.05
+
+    # RViz text placement.
+    status_text.position: [0.10, 0.0, 1.20]
+    status_text.scale: 0.035
+
+    # Planned TCP path and controller-state progress markers.
+    tcp_path.line_width: 0.008
+    tcp_path.color_rgba: [1.0, 0.35, 0.05, 1.0]
+    tcp_path.progress_line_width: 0.014
+    tcp_path.progress_color_rgba: [0.1, 1.0, 0.2, 1.0]
+    tcp_path.progress_point_scale: 0.035
+    tcp_path.progress_publish_period_sec: 0.10
+    tcp_path.progress_joint_tolerance_rad: 0.05
+    # Virtual-hand TCP position in flange coordinates.
+    tcp_path.tip_offset_in_flange: [0.14, 0.0, 0.0]

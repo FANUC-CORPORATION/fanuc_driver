@@ -1,0 +1,63 @@
+# MoveItPy Planning Scene and request profiles.
+planning_scene_monitor_options:
+  name: planning_scene_monitor
+  robot_description: robot_description
+  joint_state_topic: /joint_states
+  attached_collision_object_topic: /attached_collision_object
+  publish_planning_scene_topic: /planning_scene
+  monitored_planning_scene_topic: /monitored_planning_scene
+  wait_for_initial_state_timeout: 3.0
+
+planning_pipelines:
+  pipeline_names: [ompl, pilz_industrial_motion_planner]
+
+plan_request_params:
+  planning_attempts: 1
+  planning_pipeline: ompl
+  max_velocity_scaling_factor: 0.50
+  max_acceleration_scaling_factor: 0.50
+
+ompl_rrtc:
+  plan_request_params:
+    planning_attempts: 1
+    planning_pipeline: ompl
+    planner_id: RRTConnect
+    max_velocity_scaling_factor: 0.50
+    max_acceleration_scaling_factor: 0.50
+    planning_time: 1.0
+
+ompl_bkpiece_fine:
+  plan_request_params:
+    planning_attempts: 1
+    planning_pipeline: ompl
+    planner_id: BKPIECEFine
+    max_velocity_scaling_factor: 0.50
+    max_acceleration_scaling_factor: 0.50
+    planning_time: 1.0
+
+ompl_bkpiece_coarse:
+  plan_request_params:
+    planning_attempts: 1
+    planning_pipeline: ompl
+    planner_id: BKPIECECoarse
+    max_velocity_scaling_factor: 0.50
+    max_acceleration_scaling_factor: 0.50
+    planning_time: 1.0
+
+ompl_bkpiece:
+  plan_request_params:
+    planning_attempts: 1
+    planning_pipeline: ompl
+    planner_id: BKPIECE
+    max_velocity_scaling_factor: 0.50
+    max_acceleration_scaling_factor: 0.50
+    planning_time: 1.0
+
+pilz_lin:
+  plan_request_params:
+    planning_attempts: 1
+    planning_pipeline: pilz_industrial_motion_planner
+    planner_id: LIN
+    max_velocity_scaling_factor: 0.20
+    max_acceleration_scaling_factor: 0.20
+    planning_time: 5.0

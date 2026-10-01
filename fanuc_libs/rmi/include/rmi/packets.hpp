@@ -603,7 +603,7 @@ struct SetPayloadInstructionPacket
   };
 };
 
-// Packet To Set Payload
+// Packet To Set Payload ID
 struct SetPayloadPacket
 {
   struct Request
@@ -615,6 +615,22 @@ struct SetPayloadPacket
   struct Response
   {
     std::string Command = "FRC_SetPayloadID";
+    int ErrorID;
+  };
+};
+
+// Packet To Get Payload ID
+struct GetPayloadPacket
+{
+  struct Request
+  {
+    std::string Command = "FRC_GetPayloadID";
+    std::optional<uint8_t> Group;
+  };
+  struct Response
+  {
+    std::string Command = "FRC_GetPayloadID";
+    uint16_t ScheduleNumber;
     int ErrorID;
   };
 };
@@ -1271,6 +1287,28 @@ struct SetPayloadValuePacket
   };
 };
 
+struct GetPayloadValuePacket
+{
+  struct Request
+  {
+    std::string Command = "FRC_GetPayloadValue";
+    uint16_t ScheduleNumber; /* 1 - 256*/
+    std::optional<uint8_t> Group;
+  };
+  struct Response
+  {
+    std::string Command = "FRC_GetPayloadValue";
+    float Mass;
+    float CG_X;
+    float CG_Y;
+    float CG_Z;
+    float IN_X;
+    float IN_Y;
+    float IN_Z;
+    int ErrorID;
+  };
+};
+
 struct SetPayloadCompPacket
 {
   struct Request
@@ -1289,6 +1327,28 @@ struct SetPayloadCompPacket
   struct Response
   {
     std::string Command = "FRC_SetPayloadComp";
+    int ErrorID;
+  };
+};
+
+struct GetPayloadCompPacket
+{
+  struct Request
+  {
+    std::string Command = "FRC_GetPayloadComp";
+    uint16_t ScheduleNumber;
+    std::optional<uint8_t> Group;
+  };
+  struct Response
+  {
+    std::string Command = "FRC_GetPayloadComp";
+    float Mass;
+    float CG_X;
+    float CG_Y;
+    float CG_Z;
+    float IN_X;
+    float IN_Y;
+    float IN_Z;
     int ErrorID;
   };
 };

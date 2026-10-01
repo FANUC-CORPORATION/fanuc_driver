@@ -122,6 +122,14 @@ public:
                                                         float cg_y, float cg_z, float in_x, float in_y, float in_z,
                                                         std::optional<double> timeout) = 0;
 
+  virtual GetPayloadPacket::Response getPayloadSchedule(std::optional<double> timeout) = 0;
+
+  virtual GetPayloadValuePacket::Response getPayloadValue(uint16_t payload_schedule_number,
+                                                          std::optional<double> timeout) = 0;
+
+  virtual GetPayloadCompPacket::Response getPayloadComp(uint16_t payload_schedule_number,
+                                                        std::optional<double> timeout) = 0;
+
   virtual ReadJointAnglesPacket::Response readJointAngles(const std::optional<uint8_t>& group,
                                                           std::optional<double> timeout) = 0;
 
@@ -277,6 +285,14 @@ public:
 
   SetPayloadCompPacket::Response setPayloadComp(uint8_t payload_schedule_number, float mass, float cg_x, float cg_y,
                                                 float cg_z, float in_x, float in_y, float in_z,
+                                                std::optional<double> timeout) override;
+
+  GetPayloadPacket::Response getPayloadSchedule(std::optional<double> timeout) override;
+
+  GetPayloadValuePacket::Response getPayloadValue(uint16_t payload_schedule_number,
+                                                  std::optional<double> timeout) override;
+
+  GetPayloadCompPacket::Response getPayloadComp(uint16_t payload_schedule_number,
                                                 std::optional<double> timeout) override;
 
   ReadJointAnglesPacket::Response readJointAngles(const std::optional<uint8_t>& group,

@@ -56,6 +56,10 @@ set(srv_files
   srv/SetPayloadValue.srv
   srv/SetPayloadComp.srv
 
+  srv/GetPayloadID.srv
+  srv/GetPayloadValue.srv
+  srv/GetPayloadComp.srv
+
   srv/ReadError.srv
 
   srv/GetUFrameUTool.srv

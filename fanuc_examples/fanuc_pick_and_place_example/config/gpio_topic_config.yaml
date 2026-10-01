@@ -1,0 +1,7 @@
+# Cyclic hand command and feedback interfaces.
+gpio_topic_config:
+  io_state:
+    - {type: RI, start: 1, length: 1}
+    - {type: RO, start: 1, length: 1}
+  io_cmd:
+    - {type: RO, start: 1, length: 1}

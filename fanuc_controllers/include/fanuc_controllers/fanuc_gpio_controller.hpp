@@ -20,6 +20,9 @@
 #include "fanuc_msgs/srv/get_cartesian_position.hpp"
 #include "fanuc_msgs/srv/get_group_io.hpp"
 #include "fanuc_msgs/srv/get_num_reg.hpp"
+#include "fanuc_msgs/srv/get_payload_comp.hpp"
+#include "fanuc_msgs/srv/get_payload_id.hpp"
+#include "fanuc_msgs/srv/get_payload_value.hpp"
 #include "fanuc_msgs/srv/get_pos_reg.hpp"
 #include "fanuc_msgs/srv/get_tcp_speed.hpp"
 #include "fanuc_msgs/srv/get_u_frame_data.hpp"
@@ -106,6 +109,9 @@ private:
   ServicePtr<fanuc_msgs::srv::SetPayloadID> set_payload_id_service_;
   ServicePtr<fanuc_msgs::srv::SetPayloadValue> set_payload_value_service_;
   ServicePtr<fanuc_msgs::srv::SetPayloadComp> set_payload_comp_service_;
+  ServicePtr<fanuc_msgs::srv::GetPayloadID> get_payload_id_service_;
+  ServicePtr<fanuc_msgs::srv::GetPayloadValue> get_payload_value_service_;
+  ServicePtr<fanuc_msgs::srv::GetPayloadComp> get_payload_comp_service_;
   ServicePtr<fanuc_msgs::srv::ReadError> read_error_service_;
   ServicePtr<fanuc_msgs::srv::GetUFrameUTool> get_uframe_utool_service_;
   ServicePtr<fanuc_msgs::srv::SetUFrameUTool> set_uframe_utool_service_;

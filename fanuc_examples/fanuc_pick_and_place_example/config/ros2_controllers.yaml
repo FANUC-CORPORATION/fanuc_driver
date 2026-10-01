@@ -1,0 +1,33 @@
+/**:
+  ros__parameters:
+    update_rate: 500  # Hz
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    joint_trajectory_controller:
+      type: fanuc_controllers/ScaledJointTrajectoryController
+    fanuc_gpio_controller:
+      type: fanuc_controllers/FanucGPIOController
+
+/**/fanuc_gpio_controller:
+  ros__parameters:
+    gpio_config_file_package: $(var gpio_config_package)
+    gpio_config_file_path: $(var gpio_config_path)
+
+/**/joint_trajectory_controller:
+  ros__parameters:
+    joints: [J1, J2, J3, J4, J5, J6]
+    command_interfaces: [position]
+    state_interfaces: [position]
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    allow_nonzero_velocity_at_trajectory_end: false
+    constraints:
+      stopped_velocity_tolerance: 0.0
+      goal_time: 0.0
+      J1: {goal: 0.05, trajectory: 0.25}
+      J2: {goal: 0.05, trajectory: 0.25}
+      J3: {goal: 0.05, trajectory: 0.25}
+      J4: {goal: 0.05, trajectory: 0.25}
+      J5: {goal: 0.05, trajectory: 0.25}
+      J6: {goal: 0.05, trajectory: 0.25}

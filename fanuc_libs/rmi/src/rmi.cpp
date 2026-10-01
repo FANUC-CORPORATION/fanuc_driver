@@ -847,6 +847,35 @@ SetPayloadCompPacket::Response RMIConnection::setPayloadComp(const uint8_t paylo
                                                            std::nullopt);
 }
 
+GetPayloadPacket::Response RMIConnection::getPayloadSchedule(const std::optional<double> timeout)
+{
+  GetPayloadPacket::Request get_payload_packet;
+  std::scoped_lock lock(motion_mutex_);
+  connection_impl_->write(get_payload_packet);
+  return getResponsePacket<GetPayloadPacket::Response>(timeout, "Failed to get the payload schedule. ", std::nullopt);
+}
+
+GetPayloadValuePacket::Response RMIConnection::getPayloadValue(const uint16_t payload_schedule_number,
+                                                               const std::optional<double> timeout)
+{
+  GetPayloadValuePacket::Request get_payload_value_packet;
+  get_payload_value_packet.ScheduleNumber = payload_schedule_number;
+  std::scoped_lock lock(motion_mutex_);
+  connection_impl_->write(get_payload_value_packet);
+  return getResponsePacket<GetPayloadValuePacket::Response>(timeout, "Failed to get the payload value. ", std::nullopt);
+}
+
+GetPayloadCompPacket::Response RMIConnection::getPayloadComp(const uint16_t payload_schedule_number,
+                                                             const std::optional<double> timeout)
+{
+  GetPayloadCompPacket::Request get_payload_comp_packet;
+  get_payload_comp_packet.ScheduleNumber = payload_schedule_number;
+  std::scoped_lock lock(motion_mutex_);
+  connection_impl_->write(get_payload_comp_packet);
+  return getResponsePacket<GetPayloadCompPacket::Response>(timeout, "Failed to get the payload compensation. ",
+                                                           std::nullopt);
+}
+
 ReadJointAnglesPacket::Response RMIConnection::readJointAngles(const std::optional<uint8_t>& group,
                                                                const std::optional<double> timeout)
 {

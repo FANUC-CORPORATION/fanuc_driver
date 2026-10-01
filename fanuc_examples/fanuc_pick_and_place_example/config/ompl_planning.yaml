@@ -1,0 +1,53 @@
+# OMPL pipeline and manipulator planning group.
+planning_plugins:
+  - ompl_interface/OMPLPlanner
+# Keep raw planner paths; TOTG, Ruckig, and validation still post-process them.
+simplify_solutions: false
+request_adapters:
+  - default_planning_request_adapters/ResolveConstraintFrames
+  - default_planning_request_adapters/ValidateWorkspaceBounds
+  - default_planning_request_adapters/CheckStartStateBounds
+  - default_planning_request_adapters/CheckStartStateCollision
+response_adapters:
+  - default_planning_response_adapters/AddTimeOptimalParameterization
+  - default_planning_response_adapters/AddRuckigTrajectorySmoothing
+  - default_planning_response_adapters/ValidateSolution
+
+planner_configs:
+  RRTConnect:
+    type: geometric::RRTConnect
+    range: 0.25
+  BKPIECE:
+    type: geometric::BKPIECE
+    range: 0.35
+    border_fraction: 0.9
+    failed_expansion_score_factor: 0.5
+    min_valid_path_fraction: 0.5
+
+  BKPIECEFine:
+    type: geometric::BKPIECE
+    range: 0.25
+    border_fraction: 0.9
+    failed_expansion_score_factor: 0.5
+    min_valid_path_fraction: 0.5
+  BKPIECECoarse:
+    type: geometric::BKPIECE
+    range: 0.50
+    border_fraction: 0.9
+    failed_expansion_score_factor: 0.5
+    min_valid_path_fraction: 0.5
+
+manipulator:
+  default_planner_config: RRTConnect
+  planner_configs: [RRTConnect, BKPIECEFine, BKPIECE, BKPIECECoarse]
+  # Use OMPL constrained state space when path constraints are present.
+  enforce_constrained_state_space: true
+  projection_evaluator: joints(J1,J2)
+  # Collision-check interpolation resolution as a fraction of state-space extent.
+  longest_valid_segment_fraction: 0.002
+
+# TOTG resampling parameters.
+totg:
+  path_tolerance: 0.005
+  resample_dt: 0.10
+  min_angle_change: 0.001
